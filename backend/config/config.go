@@ -13,13 +13,13 @@ type Config struct {
 }
 
 type LogConfig struct {
-	Level string
+	Level string `yaml:"level"`
 }
 
 type ServerConfig struct {
-	Port int
-	Host string
-	Mode Devmode
+	Port int     `yaml:"port"`
+	Host string  `yaml:"host"`
+	Mode Devmode `yaml:"mode"`
 }
 
 type Devmode string
