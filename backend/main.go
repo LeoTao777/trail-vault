@@ -5,6 +5,7 @@ import (
 	"log"
 
 	"github.com/LeoTao777/travil-vault/backend/config"
+	"github.com/LeoTao777/travil-vault/backend/server"
 )
 
 func main() {
@@ -13,5 +14,9 @@ func main() {
 	if err != nil {
 		log.Fatal(err)
 	}
-	fmt.Println(cfg.Server.Host, cfg.Server.Port, cfg.Server.Mode, cfg.Log.Level)
+	srv := server.New(&cfg.Server, "../frontend")
+
+	if err := srv.Run(); err != nil {
+		log.Fatal(err)
+	}
 }
