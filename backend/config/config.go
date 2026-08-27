@@ -8,12 +8,17 @@ import (
 )
 
 type Config struct {
-	Server ServerConfig `yaml:"server"`
-	Log    LogConfig    `yaml:"log"`
+	Server   ServerConfig   `yaml:"server"`
+	Log      LogConfig      `yaml:"log"`
+	Database DatabaseConfig `yaml:"database"`
 }
 
 type LogConfig struct {
 	Level string `yaml:"level"`
+}
+
+type DatabaseConfig struct {
+	Path string `yaml:"path"` // SQLite 数据库文件路径
 }
 
 type ServerConfig struct {

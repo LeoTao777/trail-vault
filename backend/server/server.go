@@ -5,17 +5,32 @@ import (
 	"log"
 
 	"github.com/LeoTao777/travil-vault/backend/config"
+	"github.com/LeoTao777/travil-vault/backend/internal/handler"
+	"github.com/LeoTao777/travil-vault/backend/internal/repository"
+	"github.com/LeoTao777/travil-vault/backend/internal/service"
 	"github.com/gin-gonic/gin"
+	"gorm.io/gorm"
 )
 
 // Server 封装 Gin 引擎与监听地址。
 type Server struct {
 	cfg         *config.ServerConfig
 	frontendDir string // 调试：前端静态文件目录；部署时改为打包产物目录
+	userService service.UserService
+	userHandler *handler.UserHandler
 }
 
-func New(srvCfg *config.ServerConfig, frontendDir string) *Server {
-	return &Server{cfg: srvCfg, frontendDir: frontendDir}
+func New(srvCfg *config.ServerConfig, frontendDir string, db *gorm.DB) *Server {
+	userRepo := repository.NewUserRepository(db)
+	userService := service.NewUserService(userRepo)
+	userHandler := handler.NewUserHandler(userService)
+
+	return &Server{
+		cfg:         srvCfg,
+		frontendDir: frontendDir,
+		userService: userService,
+		userHandler: userHandler,
+	}
 }
 
 // Run 根据 host:port 启动 HTTP 服务。

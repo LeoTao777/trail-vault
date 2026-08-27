@@ -5,3 +5,6 @@ server:
 
 log:
   level: info
+
+database:
+  path: data/trail-vault.db
