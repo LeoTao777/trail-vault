@@ -20,7 +20,7 @@ const OWNER_NAME = "Nova Kepler";
 const HOME_CITY = "上海";
 
 const STORAGE_KEY = "journeyatlas_records_v1";
-const DATA_URL = "./data/travel-log.json";
+const DATA_URL = "/api/records";
 const CHINA_MAP_URL = "./data/china-100000-full.json";
 const WORLD_MAP_URL = "./data/world-110m.json";
 const WATER_CHINA_URL = "./data/water-china.json";
