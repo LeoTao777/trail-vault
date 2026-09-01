@@ -1,6 +1,7 @@
 package database
 
 import (
+	"errors"
 	"fmt"
 	"os"
 	"path/filepath"
@@ -26,6 +27,22 @@ func Init(dbPath string) (*gorm.DB, error) {
 
 	if err := db.AutoMigrate(&model.User{}); err != nil {
 		return nil, fmt.Errorf("auto migrate: %w", err)
+	}
+
+	// 临时插入默认用户 leotao（已存在则跳过）
+	var exist model.User
+	if err := db.Where("username = ?", "leotao").First(&exist).Error; err != nil {
+		if errors.Is(err, gorm.ErrRecordNotFound) {
+			if err := db.Create(&model.User{
+				Username: "leotao",
+				Password: "leotao123456",
+				Email:    "leotao@trail-vault.dev",
+			}).Error; err != nil {
+				return nil, fmt.Errorf("seed default user: %w", err)
+			}
+		} else {
+			return nil, fmt.Errorf("query default user: %w", err)
+		}
 	}
 	return db, nil
 }

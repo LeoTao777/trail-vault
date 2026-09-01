@@ -3,6 +3,7 @@ package server
 import (
 	"net/http"
 
+	"github.com/LeoTao777/travil-vault/backend/config"
 	"github.com/gin-gonic/gin"
 )
 
@@ -36,6 +37,10 @@ func (s *Server) registerRoutes(r *gin.Engine) {
 	//后期修改为监听/ 跳转到首页
 	fileServer := http.FileServer(http.Dir(s.frontendDir))
 	r.NoRoute(func(c *gin.Context) {
+		if s.cfg.Mode == config.Dev {
+			// 开发模式禁用静态资源缓存：前端改完普通刷新即生效，不必重启服务或硬刷新
+			c.Header("Cache-Control", "no-store, no-cache, must-revalidate")
+		}
 		fileServer.ServeHTTP(c.Writer, c.Request)
 	})
 }

@@ -9,8 +9,8 @@ const APP_NAME = "Roamap";
 
 const SITE_TITLE = {
   eyebrow: "ROAMAP",
-  title: "Nova\n行旅地图",
-  docTitle: "Nova · 行旅地图",
+  title: "LeoTao\n行旅地图",
+  docTitle: "Leotao · 行旅地图",
 };
 
 // 站点主人 / 默认旅客名 —— 开源后改成你自己的；示例为虚构人物「Nova Kepler」。
@@ -21,6 +21,7 @@ const HOME_CITY = "上海";
 
 const STORAGE_KEY = "journeyatlas_records_v1";
 const DATA_URL = "/api/records";
+const USERS_URL = "/api/users";
 const CHINA_MAP_URL = "./data/china-100000-full.json";
 const WORLD_MAP_URL = "./data/world-110m.json";
 const WATER_CHINA_URL = "./data/water-china.json";
@@ -362,6 +363,7 @@ const els = {
 };
 
 let records = [];
+let users = [];   // 旅客筛选下拉：来自 /api/users 的用户名
 let selectedId = "";
 let playTimer = null;          // requestAnimationFrame 句柄（播放中非 null）
 let play = null;               // 播放状态 { segs, i, grow, lastTs, holdUntil, fitKey }
@@ -397,8 +399,18 @@ async function loadData({ preferLocal = true } = {}) {
     : `${data.metadata?.lastUpdated || "当前"} 资料，${records.length} 条行程`;
 }
 
-
-
+// 拉取后端用户列表，供「旅客筛选」下拉使用（失败则留空，筛选仍回落到行程内旅客名）
+async function loadUsers() {
+  try {
+    const res = await fetch(USERS_URL, { cache: "no-store" });
+    if (!res.ok) throw new Error(`用户列表读取失败：${res.status}`);
+    const json = await res.json();
+    users = (json.users || []).map(u => u.username).filter(Boolean);
+  } catch (error) {
+    users = [];
+    console.error(error);
+  }
+}
 
 // 把一组行程的所有城市框进画面
 function fitToRecords(list) {
@@ -502,10 +514,12 @@ function setupFilters() {
   els.year.innerHTML = `<option value="all">全部年份</option>${years.map(year => `<option value="${year}">${year}</option>`).join("")}`;
   restore(els.year, keep.year, "all");
 
-  const travelers = Array.from(new Set(records.flatMap(record => [record.traveler, ...(record.people || [])]).filter(Boolean))).sort((a, b) => a.localeCompare(b, "zh-CN"));
+  const travelers = Array.from(new Set([
+    ...users,
+    ...records.flatMap(record => [record.traveler, ...(record.people || [])]).filter(Boolean)
+  ])).sort((a, b) => a.localeCompare(b, "zh-CN"));
   els.traveler.innerHTML = [
     `<option value="self">${OWNER_NAME}</option>`,
-    `<option value="all">全部旅客</option>`,
     ...travelers
       .filter(name => name && !name.includes(OWNER_NAME))
       .map(name => `<option value="${escapeHtml(name)}">${escapeHtml(name)}</option>`)
@@ -885,12 +899,12 @@ function rememberCity(name, lat, lng, en) {
 // 国家代码 → 大洲（用于候选标签按大洲着色）。未列出的归 other。
 const CONTINENT_ZH = { as: "亚洲", eu: "欧洲", na: "北美", sa: "南美", af: "非洲", oc: "大洋洲", other: "海外" };
 const CC_CONTINENT = {
-  JP:"as",KR:"as",KP:"as",TH:"as",SG:"as",MY:"as",VN:"as",ID:"as",PH:"as",IN:"as",AE:"as",QA:"as",SA:"as",IL:"as",TR:"as",KH:"as",LA:"as",MM:"as",NP:"as",LK:"as",PK:"as",BD:"as",KZ:"as",UZ:"as",MN:"as",BT:"as",BN:"as",IR:"as",IQ:"as",SY:"as",YE:"as",JO:"as",LB:"as",OM:"as",KW:"as",BH:"as",GE:"as",AM:"as",AZ:"as",AF:"as",TM:"as",KG:"as",TJ:"as",MV:"as",
-  FR:"eu",IT:"eu",DE:"eu",AT:"eu",CH:"eu",NL:"eu",BE:"eu",ES:"eu",GB:"eu",IE:"eu",PT:"eu",GR:"eu",CZ:"eu",HU:"eu",PL:"eu",SE:"eu",NO:"eu",FI:"eu",DK:"eu",RU:"eu",UA:"eu",RO:"eu",HR:"eu",IS:"eu",LU:"eu",MC:"eu",VA:"eu",SK:"eu",SI:"eu",EE:"eu",LV:"eu",LT:"eu",BG:"eu",RS:"eu",CY:"eu",MT:"eu",AL:"eu",MK:"eu",BA:"eu",ME:"eu",
-  US:"na",CA:"na",MX:"na",CU:"na",CR:"na",PA:"na",GT:"na",DO:"na",JM:"na",BS:"na",HN:"na",NI:"na",SV:"na",
-  BR:"sa",AR:"sa",CL:"sa",PE:"sa",CO:"sa",UY:"sa",BO:"sa",EC:"sa",VE:"sa",PY:"sa",
-  EG:"af",ZA:"af",MA:"af",KE:"af",NG:"af",TZ:"af",ET:"af",TN:"af",DZ:"af",LY:"af",SD:"af",GH:"af",CI:"af",SN:"af",UG:"af",ZW:"af",ZM:"af",MZ:"af",MU:"af",
-  AU:"oc",NZ:"oc",FJ:"oc",PG:"oc",PF:"oc",NC:"oc"
+  JP: "as", KR: "as", KP: "as", TH: "as", SG: "as", MY: "as", VN: "as", ID: "as", PH: "as", IN: "as", AE: "as", QA: "as", SA: "as", IL: "as", TR: "as", KH: "as", LA: "as", MM: "as", NP: "as", LK: "as", PK: "as", BD: "as", KZ: "as", UZ: "as", MN: "as", BT: "as", BN: "as", IR: "as", IQ: "as", SY: "as", YE: "as", JO: "as", LB: "as", OM: "as", KW: "as", BH: "as", GE: "as", AM: "as", AZ: "as", AF: "as", TM: "as", KG: "as", TJ: "as", MV: "as",
+  FR: "eu", IT: "eu", DE: "eu", AT: "eu", CH: "eu", NL: "eu", BE: "eu", ES: "eu", GB: "eu", IE: "eu", PT: "eu", GR: "eu", CZ: "eu", HU: "eu", PL: "eu", SE: "eu", NO: "eu", FI: "eu", DK: "eu", RU: "eu", UA: "eu", RO: "eu", HR: "eu", IS: "eu", LU: "eu", MC: "eu", VA: "eu", SK: "eu", SI: "eu", EE: "eu", LV: "eu", LT: "eu", BG: "eu", RS: "eu", CY: "eu", MT: "eu", AL: "eu", MK: "eu", BA: "eu", ME: "eu",
+  US: "na", CA: "na", MX: "na", CU: "na", CR: "na", PA: "na", GT: "na", DO: "na", JM: "na", BS: "na", HN: "na", NI: "na", SV: "na",
+  BR: "sa", AR: "sa", CL: "sa", PE: "sa", CO: "sa", UY: "sa", BO: "sa", EC: "sa", VE: "sa", PY: "sa",
+  EG: "af", ZA: "af", MA: "af", KE: "af", NG: "af", TZ: "af", ET: "af", TN: "af", DZ: "af", LY: "af", SD: "af", GH: "af", CI: "af", SN: "af", UG: "af", ZW: "af", ZM: "af", MZ: "af", MU: "af",
+  AU: "oc", NZ: "oc", FJ: "oc", PG: "oc", PF: "oc", NC: "oc"
 };
 function continentOf(cc) { const k = CC_CONTINENT[String(cc || "").toUpperCase()] || "other"; return { key: k, zh: CONTINENT_ZH[k] }; }
 
@@ -1405,9 +1419,9 @@ function applyMapTheme(c) {
   const PARKS = dark ? liftLightness(c.parks || c.bg, 0.085, 0.135) : (c.parks || c.bg);
   const roadColor = id =>
     /motorway|trunk|highway/.test(id) ? (c.road_motorway || c.road_default) :
-    /primary/.test(id) ? (c.road_primary || c.road_default) :
-    /secondary|tertiary/.test(id) ? (c.road_secondary || c.road_tertiary || c.road_default) :
-    (c.road_residential || c.road_default);
+      /primary/.test(id) ? (c.road_primary || c.road_default) :
+        /secondary|tertiary/.test(id) ? (c.road_secondary || c.road_tertiary || c.road_default) :
+          (c.road_residential || c.road_default);
   (glMap.getStyle().layers || []).forEach(l => {
     const id = (l.id || "").toLowerCase(), sl = (l["source-layer"] || "").toLowerCase(), key = sl + " " + id;
     try {
@@ -1634,7 +1648,7 @@ const POSTER_CANVAS = {
 function posterMetric(id) { const el = document.getElementById(id); return el ? el.textContent : "—"; }
 function posterCountryCount() {
   const set = new Set();
-  filteredRecords().forEach(r => { if (!r.countsAsVisited) return; [r.origin, r.destination].filter(Boolean).forEach(c => { const m = CITY_META[stripShi(c)]; set.add(m && m.country ? m.country : "中国"); }); });
+  filteredRecords().forEach(r => { if (!r.countsAsVisited) return;[r.origin, r.destination].filter(Boolean).forEach(c => { const m = CITY_META[stripShi(c)]; set.add(m && m.country ? m.country : "中国"); }); });
   return set.size;
 }
 const POSTER_STATS = [
@@ -1682,8 +1696,8 @@ function posterPaletteFromTheme(t) {
 }
 const POSTER_PALETTES = (() => {
   const base = {
-    warm:  { label: "暖宋纸",   paper: "#fbfaf4", ink: "#2b2823", inkSoft: "#5b554c", red: "#b84232", land: "#f1ece1", border: "#d8d0c0", prov: "#e3ddce", water: "#bcccd0", road: "#c4b79f", night: false },
-    slate: { label: "板岩灰",   paper: "#f4f5f6", ink: "#2a2d30", inkSoft: "#5c6166", red: "#b84232", land: "#e9ebed", border: "#d3d7da", prov: "#dee1e4", water: "#cfd6db", road: "#bfc4c9", night: false },
+    warm: { label: "暖宋纸", paper: "#fbfaf4", ink: "#2b2823", inkSoft: "#5b554c", red: "#b84232", land: "#f1ece1", border: "#d8d0c0", prov: "#e3ddce", water: "#bcccd0", road: "#c4b79f", night: false },
+    slate: { label: "板岩灰", paper: "#f4f5f6", ink: "#2a2d30", inkSoft: "#5c6166", red: "#b84232", land: "#e9ebed", border: "#d3d7da", prov: "#dee1e4", water: "#cfd6db", road: "#bfc4c9", night: false },
     night: { label: "深海夜蓝", paper: "#0c1a30", ink: "#eef4ff", inkSoft: "#9fb6d6", red: "#ff6a5a", land: "#13273f", border: "#2c4259", prov: "#203850", water: "#0f2236", road: "#3a4f6a", night: true }
   };
   const themes = (typeof window !== "undefined" && window.POSTER_THEMES) || [];
@@ -1773,7 +1787,7 @@ function renderTravelPoster(canvas, opts) {
 
   // —— 城市点 + 名称（到访次数定优先级；标签四向避让，挤不下的只留圆点）——
   const usage = new Map();
-  filteredRecords().forEach(r => { if (!r.countsAsVisited) return; [r.origin, r.destination].filter(Boolean).forEach(c => { const k = stripShi(c); usage.set(k, (usage.get(k) || 0) + 1); }); });
+  filteredRecords().forEach(r => { if (!r.countsAsVisited) return;[r.origin, r.destination].filter(Boolean).forEach(c => { const k = stripShi(c); usage.set(k, (usage.get(k) || 0) + 1); }); });
   const items = [];
   usage.forEach((count, city) => {
     const ll = cityLngLat(city); if (!ll) return;
@@ -1852,9 +1866,9 @@ function toggleImmersive() {
   const btn = document.getElementById("immersiveBtn");
   if (btn) { btn.innerHTML = on ? ICON_FS.exit : ICON_FS.enter; btn.title = on ? "退出全屏" : "全屏沉浸"; }
   try {
-    if (on && !document.fullscreenElement && document.documentElement.requestFullscreen) document.documentElement.requestFullscreen().catch(() => {});
-    else if (!on && document.fullscreenElement && document.exitFullscreen) document.exitFullscreen().catch(() => {});
-  } catch (e) {}
+    if (on && !document.fullscreenElement && document.documentElement.requestFullscreen) document.documentElement.requestFullscreen().catch(() => { });
+    else if (!on && document.fullscreenElement && document.exitFullscreen) document.exitFullscreen().catch(() => { });
+  } catch (e) { }
   if (glMap) setTimeout(() => glMap.resize(), 80);
 }
 document.addEventListener("fullscreenchange", () => {
@@ -1869,7 +1883,7 @@ document.addEventListener("fullscreenchange", () => {
 const METRIC_KEYS = ["days", "cost", "hours", "cities", "missing"];
 let metricVis = (() => {
   const def = { days: true, cost: true, hours: true, cities: true, missing: true };
-  try { const s = JSON.parse(localStorage.getItem("journeyatlas-metric-vis")); if (s && typeof s === "object") return Object.assign(def, s); } catch (e) {}
+  try { const s = JSON.parse(localStorage.getItem("journeyatlas-metric-vis")); if (s && typeof s === "object") return Object.assign(def, s); } catch (e) { }
   return def;
 })();
 function applyMetricVis() {
@@ -2682,7 +2696,7 @@ function flashToast(msg, ms = 1800) {
 // 跳转前先一闪而过提示要去的是另一个项目；并把聚焦城市英文名复制到剪贴板，方便到那边粘贴。
 function openStreetPosterSite(city) {
   const latin = city ? titleCase(cityLatin(stripShi(city))) : "";
-  if (latin && navigator.clipboard) navigator.clipboard.writeText(latin).catch(() => {});
+  if (latin && navigator.clipboard) navigator.clipboard.writeText(latin).catch(() => { });
   flashToast("即将前往另一个开源项目 <b>maptoposter</b> 生成街道海报 ↗", 1700);
   // 延迟一点点再打开（仍在用户手势的有效激活窗口内），好让提示被看见。
   setTimeout(() => window.open("https://maptoposter.0v0.one/", "_blank", "noopener"), 820);
@@ -3932,6 +3946,7 @@ async function init() {
     els.status.textContent = "资料读取失败，请通过本地服务打开页面或导入 JSON";
     console.error(error);
   }
+  await loadUsers();   // 拉取 /api/users，供「旅客筛选」下拉使用（失败不阻断启动）
   setupFilters();
   bindEvents();
   bindPosterModal();
