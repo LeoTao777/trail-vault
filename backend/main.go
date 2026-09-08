@@ -6,6 +6,7 @@ import (
 
 	"github.com/LeoTao777/travil-vault/backend/config"
 	"github.com/LeoTao777/travil-vault/backend/internal/database"
+	"github.com/LeoTao777/travil-vault/backend/internal/pkgutil"
 	"github.com/LeoTao777/travil-vault/backend/server"
 )
 
@@ -27,4 +28,10 @@ func main() {
 	if err := srv.Run(); err != nil {
 		log.Fatal(err)
 	}
+
+	//初始化雪花算法单例
+	if err := pkgutil.Init(1111); err != nil {
+		log.Fatal(err)
+	}
+
 }
