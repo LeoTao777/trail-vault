@@ -2,13 +2,13 @@ package server
 
 import (
 	"fmt"
-	"log"
 
 	"github.com/LeoTao777/travil-vault/backend/config"
 	"github.com/LeoTao777/travil-vault/backend/internal/handler"
 	"github.com/LeoTao777/travil-vault/backend/internal/repository"
 	"github.com/LeoTao777/travil-vault/backend/internal/service"
 	"github.com/gin-gonic/gin"
+	"go.uber.org/zap"
 	"gorm.io/gorm"
 )
 
@@ -18,9 +18,10 @@ type Server struct {
 	frontendDir string // 调试：前端静态文件目录；部署时改为打包产物目录
 	userService service.UserService
 	userHandler *handler.UserHandler
+	log         *zap.Logger
 }
 
-func New(srvCfg *config.ServerConfig, frontendDir string, db *gorm.DB) *Server {
+func New(srvCfg *config.ServerConfig, frontendDir string, db *gorm.DB, log *zap.Logger) *Server {
 	userRepo := repository.NewUserRepository(db)
 	userService := service.NewUserService(userRepo)
 	userHandler := handler.NewUserHandler(userService)
@@ -30,6 +31,7 @@ func New(srvCfg *config.ServerConfig, frontendDir string, db *gorm.DB) *Server {
 		frontendDir: frontendDir,
 		userService: userService,
 		userHandler: userHandler,
+		log:         log,
 	}
 }
 
@@ -41,7 +43,10 @@ func (s *Server) Run() error {
 	s.registerRoutes(r) // 路由注册见 route.go
 
 	addr := fmt.Sprintf("%s:%d", s.cfg.Host, s.cfg.Port)
-	log.Printf("listening on %s (frontend: %s)", addr, s.frontendDir)
+	s.log.Info("listening on",
+		zap.String("addr", addr),
+		zap.String("frontend", s.frontendDir),
+	)
 	return r.Run(addr)
 }
 

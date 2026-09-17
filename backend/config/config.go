@@ -14,7 +14,14 @@ type Config struct {
 }
 
 type LogConfig struct {
-	Level string `yaml:"level"`
+	Level      string `yaml:"level"`
+	LogDir     string `yaml:"logdir"`
+	FileName   string `yaml:"filename"`
+	Console    bool   `yaml:"console"`
+	MaxSize    int    `yaml:"maxsize"`    // 单个日志文件最大容量，单位 MB
+	MaxBackups int    `yaml:"maxbackups"` // 最大保留文件数
+	MaxAge     int    `yaml:"maxage"`     // 日志保留天数
+	Compress   bool   `yaml:"compress"`   // 是否压缩旧日志
 }
 
 type DatabaseConfig struct {

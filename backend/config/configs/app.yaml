@@ -4,7 +4,14 @@ server:
   mode: dev
 
 log:
-  level: info
+  level: debug
+  logdir: ./logs
+  filename: app.log
+  console: true
+  maxsize: 100
+  maxbackups: 10
+  maxage: 7
+  compress: false
 
 database:
   path: data/trail-vault.db
