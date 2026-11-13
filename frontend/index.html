@@ -1,14 +1,20 @@
 <!doctype html>
 <html lang="zh-CN">
+
 <head>
   <meta charset="utf-8">
   <meta name="viewport" content="width=device-width, initial-scale=1">
   <title>Nova · 行旅地图</title>
-  <link rel="icon" href="data:image/svg+xml,%3Csvg xmlns='http://www.w3.org/2000/svg' viewBox='0 0 32 32'%3E%3Crect width='32' height='32' rx='7' fill='%23fbfaf4'/%3E%3Ccircle cx='16' cy='13' r='5.5' fill='none' stroke='%23b84232' stroke-width='2.4'/%3E%3Cpath d='M16 18.5 16 27' stroke='%23b84232' stroke-width='2.4' stroke-linecap='round'/%3E%3Ccircle cx='16' cy='13' r='1.8' fill='%23b84232'/%3E%3C/svg%3E">
-  <link rel="stylesheet" href="https://cdn.jsdelivr.net/npm/maplibre-gl@4.7.1/dist/maplibre-gl.css" integrity="sha384-MinO0mNliZ3vwppuPOUnGa+iq619pfMhLVUXfC4LHwSCvF9H+6P/KO4Q7qBOYV5V" crossorigin="anonymous">
-  <script src="https://cdn.jsdelivr.net/npm/maplibre-gl@4.7.1/dist/maplibre-gl.js" integrity="sha384-SYKAG6cglRMN0RVvhNeBY0r3FYKNOJtznwA0v7B5Vp9tr31xAHsZC0DqkQ/pZDmj" crossorigin="anonymous"></script>
+  <link rel="icon"
+    href="data:image/svg+xml,%3Csvg xmlns='http://www.w3.org/2000/svg' viewBox='0 0 32 32'%3E%3Crect width='32' height='32' rx='7' fill='%23fbfaf4'/%3E%3Ccircle cx='16' cy='13' r='5.5' fill='none' stroke='%23b84232' stroke-width='2.4'/%3E%3Cpath d='M16 18.5 16 27' stroke='%23b84232' stroke-width='2.4' stroke-linecap='round'/%3E%3Ccircle cx='16' cy='13' r='1.8' fill='%23b84232'/%3E%3C/svg%3E">
+  <link rel="stylesheet" href="https://cdn.jsdelivr.net/npm/maplibre-gl@4.7.1/dist/maplibre-gl.css"
+    integrity="sha384-MinO0mNliZ3vwppuPOUnGa+iq619pfMhLVUXfC4LHwSCvF9H+6P/KO4Q7qBOYV5V" crossorigin="anonymous">
+  <script src="https://cdn.jsdelivr.net/npm/maplibre-gl@4.7.1/dist/maplibre-gl.js"
+    integrity="sha384-SYKAG6cglRMN0RVvhNeBY0r3FYKNOJtznwA0v7B5Vp9tr31xAHsZC0DqkQ/pZDmj"
+    crossorigin="anonymous"></script>
   <link rel="stylesheet" href="./app.css">
 </head>
+
 <body>
   <!-- 开屏：项目名一闪而过，资料就绪后淡出 -->
   <div id="bootScreen" class="boot-screen">
@@ -39,55 +45,76 @@
           <div class="stage-actions" aria-label="数据操作">
             <div class="acts">
               <button id="playBtn" class="act-play" type="button">播放旅程</button>
-              <button id="playResetBtn" class="act-icon" type="button" title="重新播放" aria-label="重新播放" hidden><svg viewBox="0 0 24 24" width="14" height="14" aria-hidden="true"><path d="M17.65 6.35A7.95 7.95 0 0 0 12 4a8 8 0 1 0 7.73 10h-2.08A6 6 0 1 1 12 6c1.66 0 3.14.69 4.22 1.78L13 11h7V4z" fill="currentColor"/></svg></button>
-              <button id="playStopBtn" class="act-icon" type="button" title="停止并显示全部行程" aria-label="停止并显示全部行程" hidden><svg viewBox="0 0 24 24" width="13" height="13" aria-hidden="true"><rect x="6" y="6" width="12" height="12" rx="2.5" fill="currentColor"/></svg></button>
+              <button id="playResetBtn" class="act-icon" type="button" title="重新播放" aria-label="重新播放" hidden><svg
+                  viewBox="0 0 24 24" width="14" height="14" aria-hidden="true">
+                  <path
+                    d="M17.65 6.35A7.95 7.95 0 0 0 12 4a8 8 0 1 0 7.73 10h-2.08A6 6 0 1 1 12 6c1.66 0 3.14.69 4.22 1.78L13 11h7V4z"
+                    fill="currentColor" />
+                </svg></button>
+              <button id="playStopBtn" class="act-icon" type="button" title="停止并显示全部行程" aria-label="停止并显示全部行程"
+                hidden><svg viewBox="0 0 24 24" width="13" height="13" aria-hidden="true">
+                  <rect x="6" y="6" width="12" height="12" rx="2.5" fill="currentColor" />
+                </svg></button>
               <button id="eraBtn" class="act-link" type="button" title="按年份看旅程如何逐年生长">岁月</button>
               <button id="posterMapBtn" class="act-link" type="button">行旅海报</button>
               <button id="posterBtnTop" class="act-link" type="button">街道海报 ↗</button>
-              <button id="immersiveBtn" class="act-icon act-fs" type="button" title="全屏沉浸" aria-label="全屏沉浸"><svg viewBox="0 0 24 24" width="15" height="15" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="M4 9V4h5 M20 9V4h-5 M4 15v5h5 M20 15v5h-5"/></svg></button>
+              <button id="immersiveBtn" class="act-icon act-fs" type="button" title="全屏沉浸" aria-label="全屏沉浸"><svg
+                  viewBox="0 0 24 24" width="15" height="15" fill="none" stroke="currentColor" stroke-width="2"
+                  stroke-linecap="round" stroke-linejoin="round">
+                  <path d="M4 9V4h5 M20 9V4h-5 M4 15v5h5 M20 15v5h-5" />
+                </svg></button>
               <details class="more-menu">
                 <summary aria-label="更多操作">···</summary>
                 <div class="more-pop">
-                 <div class="more-scroll">
-                  <div class="more-group">
-                    <span class="more-label">显示与播放</span>
-                    <div class="more-checks"><label class="mp-chk"><input type="checkbox" id="titleVisChk" checked><span>标题报头</span></label></div>
-                    <button type="button" id="titleEditBtn" class="more-accent">自定义标题…</button>
-                  </div>
-                  <div class="more-group">
-                    <div class="more-row"><span>配色（共 23 套）</span><div id="mapSkinSwatch"></div></div>
-                  </div>
-                  <div class="more-group">
-                    <label class="more-row">播放速度
-                      <select id="playSpeedSelect">
-                        <option value="slow">慢（细看回忆）</option>
-                        <option value="normal" selected>中</option>
-                        <option value="fast">快（快速浏览）</option>
-                      </select>
-                    </label>
-                  </div>
-                  <div class="more-group">
-                    <span class="more-label">看板指标</span>
-                    <div class="more-checks">
-                      <label class="mp-chk"><input type="checkbox" data-metric="days"><span>在路天数</span></label>
-                      <label class="mp-chk"><input type="checkbox" data-metric="cost"><span>可见花销</span></label>
-                      <label class="mp-chk"><input type="checkbox" data-metric="hours"><span>移动小时</span></label>
-                      <label class="mp-chk"><input type="checkbox" data-metric="cities"><span>点亮城市</span></label>
-                      <label class="mp-chk"><input type="checkbox" data-metric="missing"><span>待补字段</span></label>
+                  <div class="more-scroll">
+                    <div class="more-group">
+                      <span class="more-label">显示与播放</span>
+                      <div class="more-checks"><label class="mp-chk"><input type="checkbox" id="titleVisChk"
+                            checked><span>标题报头</span></label></div>
+                      <button type="button" id="titleEditBtn" class="more-accent">自定义标题…</button>
+                    </div>
+                    <div class="more-group">
+                      <div class="more-row"><span>配色（共 23 套）</span>
+                        <div id="mapSkinSwatch"></div>
+                      </div>
+                    </div>
+                    <div class="more-group">
+                      <label class="more-row">播放速度
+                        <select id="playSpeedSelect">
+                          <option value="slow">慢（细看回忆）</option>
+                          <option value="normal" selected>中</option>
+                          <option value="fast">快（快速浏览）</option>
+                        </select>
+                      </label>
+                    </div>
+                    <div class="more-group">
+                      <span class="more-label">看板指标</span>
+                      <div class="more-checks">
+                        <label class="mp-chk"><input type="checkbox" data-metric="days"><span>在路天数</span></label>
+                        <label class="mp-chk"><input type="checkbox" data-metric="cost"><span>可见花销</span></label>
+                        <label class="mp-chk"><input type="checkbox" data-metric="hours"><span>移动小时</span></label>
+                        <label class="mp-chk"><input type="checkbox" data-metric="cities"><span>点亮城市</span></label>
+                        <label class="mp-chk"><input type="checkbox" data-metric="missing"><span>待补字段</span></label>
+                      </div>
+                    </div>
+                    <div class="more-group">
+                      <span class="more-label">数据</span>
+                      <button id="importBtn" type="button">导入</button>
+                      <button id="exportJsonBtn" type="button">导出 JSON</button>
+                      <button id="exportCsvBtn" type="button">导出 CSV</button>
+                      <button id="resetBtn" type="button">重载资料</button>
+                      <button id="clearBtn" type="button" class="more-danger">清空全部数据</button>
+                    </div>
+                    <div class="more-group">
+                      <button id="helpBtn" type="button" class="more-help"><svg viewBox="0 0 24 24" width="14"
+                          height="14" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round"
+                          stroke-linejoin="round" aria-hidden="true">
+                          <circle cx="12" cy="12" r="9.5" />
+                          <path d="M9.2 9.3a2.8 2.8 0 0 1 5.4 1c0 1.9-2.6 2.3-2.6 3.8" />
+                          <circle cx="12" cy="17.2" r="0.6" fill="currentColor" stroke="none" />
+                        </svg>使用说明 · 怎么看这张图</button>
                     </div>
                   </div>
-                  <div class="more-group">
-                    <span class="more-label">数据</span>
-                    <button id="importBtn" type="button">导入</button>
-                    <button id="exportJsonBtn" type="button">导出 JSON</button>
-                    <button id="exportCsvBtn" type="button">导出 CSV</button>
-                    <button id="resetBtn" type="button">重载资料</button>
-                    <button id="clearBtn" type="button" class="more-danger">清空全部数据</button>
-                  </div>
-                  <div class="more-group">
-                    <button id="helpBtn" type="button" class="more-help"><svg viewBox="0 0 24 24" width="14" height="14" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true"><circle cx="12" cy="12" r="9.5"/><path d="M9.2 9.3a2.8 2.8 0 0 1 5.4 1c0 1.9-2.6 2.3-2.6 3.8"/><circle cx="12" cy="17.2" r="0.6" fill="currentColor" stroke="none"/></svg>使用说明 · 怎么看这张图</button>
-                  </div>
-                 </div>
                 </div>
               </details>
               <input id="fileInput" class="file-input" type="file" accept=".json,.csv,application/json,text/csv">
@@ -110,11 +137,16 @@
 
           <!-- 左下：指标细线 -->
           <div class="stage-metrics metric-ribbon" aria-label="旅行汇总">
-            <div class="metric" data-metric="days"><span>在路天数</span><strong id="metricDays">0</strong><em id="metricDaysSub"></em></div>
-            <div class="metric" data-metric="cost"><span>可见花销</span><strong id="metricCost">¥0</strong><em id="metricCostSub"></em></div>
-            <div class="metric" data-metric="hours"><span>移动小时</span><strong id="metricHours">0</strong><em id="metricHoursSub"></em></div>
-            <div class="metric" data-metric="cities"><span>点亮城市</span><strong id="metricCities">0</strong><em id="metricCitiesSub"></em></div>
-            <div class="metric" data-metric="missing"><span>待补字段</span><strong id="metricMissing">0</strong><em id="metricMissingSub"></em></div>
+            <div class="metric" data-metric="days"><span>在路天数</span><strong id="metricDays">0</strong><em
+                id="metricDaysSub"></em></div>
+            <div class="metric" data-metric="cost"><span>可见花销</span><strong id="metricCost">¥0</strong><em
+                id="metricCostSub"></em></div>
+            <div class="metric" data-metric="hours"><span>移动小时</span><strong id="metricHours">0</strong><em
+                id="metricHoursSub"></em></div>
+            <div class="metric" data-metric="cities"><span>点亮城市</span><strong id="metricCities">0</strong><em
+                id="metricCitiesSub"></em></div>
+            <div class="metric" data-metric="missing"><span>待补字段</span><strong id="metricMissing">0</strong><em
+                id="metricMissingSub"></em></div>
           </div>
 
           <!-- 右下：图例 -->
@@ -138,10 +170,13 @@
         </div>
         <div class="stats-hero">
           <div class="stat-big"><span>总里程</span><strong id="statKm">0</strong><em id="statKmSub">公里</em></div>
-          <div class="stat-big"><span>出行次数</span><strong id="statTrips">0</strong><em id="statTripsSub">飞机 / 火车 / 地面</em></div>
+          <div class="stat-big"><span>出行次数</span><strong id="statTrips">0</strong><em id="statTripsSub">飞机 / 火车 /
+              地面</em></div>
           <div class="stat-big"><span>到访城市</span><strong id="statCities">0</strong><em id="statCitiesSub"></em></div>
-          <div class="stat-big"><span>国家 / 地区</span><strong id="statCountries">0</strong><em id="statCountriesSub"></em></div>
-          <div class="stat-big"><span>大洲</span><strong id="statContinents">0</strong><em id="statContinentsSub"></em></div>
+          <div class="stat-big"><span>国家 / 地区</span><strong id="statCountries">0</strong><em id="statCountriesSub"></em>
+          </div>
+          <div class="stat-big"><span>大洲</span><strong id="statContinents">0</strong><em id="statContinentsSub"></em>
+          </div>
         </div>
         <div class="stats-cols">
           <div class="stats-rank">
@@ -175,12 +210,14 @@
             <p class="panel-kicker">补录</p>
             <h2>新增一段行旅</h2>
           </div>
-          <span>先本机保存，可导出</span>
+          <span>加入后保存到后端，可导出</span>
         </div>
         <aside class="ocr-disabled" aria-label="OCR 暂不可用">
           <strong>票据 OCR 识别暂未开放</strong>
-          <p>从车票/截图自动读取行程需要一个识别服务（OCR / AI），纯前端静态站点暂时无法内置。后续若有合适的方案会补上。现在请用下面的表单手动录入；批量导入可用右上角 <b>···</b> 菜单的「导入 JSON / CSV」。</p>
-          <p class="ocr-disabled-en">Ticket OCR is disabled in this static build (it needs a recognition backend). Use the form below, or import JSON/CSV from the ··· menu.</p>
+          <p>从车票/截图自动读取行程需要一个识别服务（OCR / AI），纯前端静态站点暂时无法内置。后续若有合适的方案会补上。现在请用下面的表单手动录入；批量导入可用右上角 <b>···</b> 菜单的「导入 JSON /
+            CSV」。</p>
+          <p class="ocr-disabled-en">Ticket OCR is disabled in this static build (it needs a recognition backend). Use
+            the form below, or import JSON/CSV from the ··· menu.</p>
         </aside>
         <form id="recordForm" class="form-grid">
           <fieldset class="form-block wide">
@@ -197,10 +234,13 @@
                 <option value="cancelled">退改</option>
               </select>
             </label>
-            <label class="geo-field">出发地<input name="origin" autocomplete="off" required placeholder="搜真实地点：北京 / 恩施 茅田 / Kyoto"></label>
-            <label class="geo-field">到达地<input name="destination" autocomplete="off" placeholder="同上；停留 / 门票可留空"></label>
+            <label class="geo-field">出发地<input name="origin" autocomplete="off" required
+                placeholder="搜真实地点：北京 / 恩施 茅田 / Kyoto"></label>
+            <label class="geo-field">到达地<input name="destination" autocomplete="off"
+                placeholder="同上；停留 / 门票可留空"></label>
             <label class="span-2">标题<input name="title" placeholder="不填则自动生成：北京 → 上海"></label>
-            <p class="form-hint span-2">输入任意真实地名 → 从下拉里<b>点选</b>正确的那一个（每条标了省/国家、国内/海外）。同名地点（多个「茅田」）就靠这个区分；想改已填的，点开输入框重选即可。</p>
+            <p class="form-hint span-2">输入任意真实地名 →
+              从下拉里<b>点选</b>正确的那一个（每条标了省/国家、国内/海外）。同名地点（多个「茅田」）就靠这个区分；想改已填的，点开输入框重选即可。</p>
           </fieldset>
 
           <fieldset class="form-block wide">
@@ -222,13 +262,15 @@
 
           <fieldset class="form-block wide">
             <legend>归属</legend>
-            <label>旅客<input name="traveler" value="Nova Kepler"></label>
+            <label>旅客<select name="traveler" id="travelerSelect" title="点开下拉时从后端读取用户">
+                <option value="Nova Kepler" selected>Nova Kepler</option>
+              </select></label>
             <label class="span-2">项目<input name="project" placeholder="项目 / 目的（可选）"></label>
             <label class="span-3">备注<textarea name="notes" placeholder="证据来源、费用口径、待补事项"></textarea></label>
           </fieldset>
 
           <div class="form-actions wide">
-            <span class="save-note">加入后会进入本机版本；确认无误后可导出 JSON。</span>
+            <span class="save-note">加入后会创建到后端并进入本机版本；确认无误后可导出 JSON。</span>
             <button type="reset">清空</button>
             <button class="primary" type="submit">加入地图</button>
           </div>
@@ -248,7 +290,9 @@
         <label>类型<select id="kindFilter"></select></label>
         <label>置信度<select id="confidenceFilter"></select></label>
         <div class="search-field">
-          <label class="search-label">搜索<input id="searchInput" type="search" placeholder="车次 / 航班 / 城市 / 项目" autocomplete="off" role="combobox" aria-autocomplete="list" aria-expanded="false" aria-controls="searchSuggest"></label>
+          <label class="search-label">搜索<input id="searchInput" type="search" placeholder="车次 / 航班 / 城市 / 项目"
+              autocomplete="off" role="combobox" aria-autocomplete="list" aria-expanded="false"
+              aria-controls="searchSuggest"></label>
           <ul id="searchSuggest" class="search-suggest" role="listbox" hidden></ul>
         </div>
       </div>
@@ -289,8 +333,14 @@
         </div>
         <div class="ledger-tools">
           <div class="search-field ledger-search-field">
-            <svg class="ls-icon" viewBox="0 0 24 24" width="14" height="14" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true"><circle cx="11" cy="11" r="7"/><path d="m20 20-3.2-3.2"/></svg>
-            <input id="ledgerSearchInput" type="search" placeholder="搜车次 / 航班 / 城市 / 项目" aria-label="在资料明细中搜索行程" autocomplete="off" role="combobox" aria-autocomplete="list" aria-expanded="false" aria-controls="ledgerSearchSuggest">
+            <svg class="ls-icon" viewBox="0 0 24 24" width="14" height="14" fill="none" stroke="currentColor"
+              stroke-width="2" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true">
+              <circle cx="11" cy="11" r="7" />
+              <path d="m20 20-3.2-3.2" />
+            </svg>
+            <input id="ledgerSearchInput" type="search" placeholder="搜车次 / 航班 / 城市 / 项目" aria-label="在资料明细中搜索行程"
+              autocomplete="off" role="combobox" aria-autocomplete="list" aria-expanded="false"
+              aria-controls="ledgerSearchSuggest">
             <ul id="ledgerSearchSuggest" class="search-suggest" role="listbox" hidden></ul>
           </div>
           <span id="ledgerCount">0 条</span>
@@ -348,7 +398,8 @@
             <summary>自定义配色（12 类）</summary>
             <div id="pmColorGrid" class="pm-color-grid"></div>
           </details>
-          <label class="pm-field">自定义字体（标题用 TTF/OTF）<input id="pmFont" type="file" accept=".ttf,.otf,font/ttf,font/otf"></label>
+          <label class="pm-field">自定义字体（标题用 TTF/OTF）<input id="pmFont" type="file"
+              accept=".ttf,.otf,font/ttf,font/otf"></label>
           <div class="pm-actions">
             <button id="pmGenerate" class="primary" type="button">生成</button>
             <button id="pmDownload" type="button">下载 PNG</button>
@@ -368,4 +419,5 @@
   <script src="./data/rail-paths-data.js"></script>
   <script src="./app.js" defer></script>
 </body>
+
 </html>

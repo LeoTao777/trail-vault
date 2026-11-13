@@ -331,6 +331,7 @@ const els = {
   status: document.getElementById("dataStatus"),
   fileInput: document.getElementById("fileInput"),
   form: document.getElementById("recordForm"),
+  travelerSelect: document.getElementById("travelerSelect"),
   cityList: document.getElementById("cityList"),
   playBtn: document.getElementById("playBtn"),
   playResetBtn: document.getElementById("playResetBtn"),
@@ -382,34 +383,268 @@ async function fetchJsonWithFallback(url, fallback, label) {
   }
 }
 
-async function loadData({ preferLocal = true } = {}) {
-  if (preferLocal) {
-    const saved = localStorage.getItem(STORAGE_KEY);
-    if (saved) {
-      records = normalize(JSON.parse(saved));
-      els.status.textContent = `本机版本，${records.length} 条行程`;
-      return;
+// 「加入地图」按钮 → POST /api/records：把录入表单生成的一条 record 创建到后端。
+// 返回服务端落库后的记录（含服务端补齐的默认值 / id）；失败时抛错，由调用方决定是否降级。
+async function createTravelRecord(record) {
+  const res = await fetch(DATA_URL, {
+    method: "POST",
+    headers: { "Content-Type": "application/json" },
+    body: JSON.stringify(record)
+  });
+  if (!res.ok) {
+    const detail = await res.text().catch(() => "");
+    let message = `创建行程失败：HTTP ${res.status}`;
+    if (detail) message += ` · ${detail}`;
+    throw new Error(message);
+  }
+  const json = await res.json();
+  return json.record || record;
+}
+
+// 批量创建到后端（后端暂无 batch 接口，逐条 POST）。
+// 返回成功落库的记录与失败项，由调用方决定怎么安抚用户。
+async function pushRecordsToBackend(list) {
+  const created = [], failed = [];
+  for (const item of list) {
+    try {
+      created.push(await createTravelRecord(item));
+    } catch (error) {
+      failed.push({ item, error });
     }
   }
+  return { created, failed };
+}
 
-  const { data, source } = await fetchJsonWithFallback(DATA_URL, window.TRAVEL_LOG_DATA, "资料");
-  records = normalize(data.records || []);
-  els.status.textContent = source === "inline"
-    ? `本地文件版本，${records.length} 条行程`
-    : `${data.metadata?.lastUpdated || "当前"} 资料，${records.length} 条行程`;
+// 主动向后端查询全部旅行记录（主页数据源）：GET /api/records。
+// 后端 handler 返回 { records: [...], metadata: {...} }，也兼容直接返回数组。
+async function fetchAllTravelRecords() {
+  const res = await fetch(DATA_URL, { cache: "no-store" });
+  if (!res.ok) throw new Error(`旅行记录读取失败：HTTP ${res.status}`);
+  const json = await res.json();
+  const list = Array.isArray(json) ? json : (json.records || []);
+  return { records: list, metadata: (json && json.metadata) || {} };
+}
+
+// 主页加载：以后端为准主动拉一次全量记录；后端不可用时依次回退到
+// ①上次成功拉取的本机缓存 ②内置 data/travel-log-data.js，保证断网也能看到东西。
+async function loadData() {
+  try {
+    const { records: raw, metadata } = await fetchAllTravelRecords();
+    records = normalize(raw);
+    els.status.textContent = `${metadata.lastUpdated || "当前"} 资料，${records.length} 条行程 · 来自后端`;
+    try { localStorage.setItem(STORAGE_KEY, JSON.stringify(records, null, 2)); } catch (e) { /* 隐私模式 */ }
+    return;
+  } catch (error) {
+    console.error("后端记录读取失败，回退本机数据", error);
+  }
+
+  const cached = (() => { try { return localStorage.getItem(STORAGE_KEY); } catch (e) { return null; } })();
+  if (cached) {
+    try {
+      records = normalize(JSON.parse(cached));
+      els.status.textContent = `后端未连接，使用本机缓存，${records.length} 条行程`;
+      return;
+    } catch (e) { /* 缓存坏了就当没有 */ }
+  }
+
+  records = normalize((window.TRAVEL_LOG_DATA && window.TRAVEL_LOG_DATA.records) || []);
+  els.status.textContent = `后端未连接，使用内置资料，${records.length} 条行程`;
+}
+
+// 首页/主页重新激活时主动查询全部旅行记录，并就地重绘（地图/时间线/档案/明细）。
+let recordsRefreshing = false;
+async function refreshRecordsFromBackend({ silent = false } = {}) {
+  if (recordsRefreshing) return;
+  recordsRefreshing = true;
+  const keepSelected = selectedId;
+  try {
+    const { records: raw, metadata } = await fetchAllTravelRecords();
+    records = normalize(raw);
+    if (!records.some(record => record.id === keepSelected)) {
+      selectedId = records.find(record => record.showInTimeline !== false)?.id || records[0]?.id || "";
+    }
+    try { localStorage.setItem(STORAGE_KEY, JSON.stringify(records, null, 2)); } catch (e) { /* 隐私模式 */ }
+    setupFilters();
+    render();
+    els.status.textContent = `${metadata.lastUpdated || "当前"} 资料，${records.length} 条行程 · 已从后端刷新`;
+    if (!silent) flashToast(`已从后端刷新：${records.length} 条行程`, 1600);
+  } catch (error) {
+    console.error("刷新旅行记录失败", error);
+    els.status.textContent = "刷新失败：后端未连接，仍显示上一次的资料";
+    if (!silent) flashToast(`刷新失败：${escapeHtml(error.message || "后端未连接")}`, 2600);
+  } finally {
+    recordsRefreshing = false;
+  }
+}
+
+// 从后端读取用户列表（GET /api/users）。返回用户对象数组；失败时抛错。
+// 兼容后端直接返回数组或 { users: [...] } 两种形状。
+async function fetchUsers() {
+  const res = await fetch(USERS_URL, { cache: "no-store" });
+  if (!res.ok) throw new Error(`用户列表读取失败：${res.status}`);
+  const json = await res.json();
+  return Array.isArray(json) ? json : (json.users || []);
+}
+
+// 旅客名：后端 User.Username；字段缺失时退到 name / email，兼容纯字符串数组。
+function usernameOf(user) {
+  if (typeof user === "string") return user.trim();
+  return String((user && (user.username || user.name || user.email)) || "").trim();
 }
 
 // 拉取后端用户列表，供「旅客筛选」下拉使用（失败则留空，筛选仍回落到行程内旅客名）
 async function loadUsers() {
   try {
-    const res = await fetch(USERS_URL, { cache: "no-store" });
-    if (!res.ok) throw new Error(`用户列表读取失败：${res.status}`);
-    const json = await res.json();
-    users = (json.users || []).map(u => u.username).filter(Boolean);
+    users = (await fetchUsers()).map(usernameOf).filter(Boolean);
   } catch (error) {
     users = [];
     console.error(error);
   }
+}
+
+/* —— 录入表单「归属 / 旅客」下拉 ——
+   原来是手填 input，现改为 select：不与页面一起预填用户，而是在悬停/聚焦预热、
+   点开下拉时向 /api/users 查询用户信息（之后每次展开再刷新一次）。
+   旅客筛选仍由 loadUsers() 在启动时取一次。 */
+let travelerUsersLoaded = false;   // 是否至少成功取过一次
+let travelerUsersPending = null;  // 并发展开共用一个请求
+
+function travelerSelect() {
+  const el = els.travelerSelect || (els.form && els.form.elements.traveler);
+  return el && el.tagName === "SELECT" ? el : null;
+}
+
+// 重建选项：保留当前值与站点默认主人，后端用户去重后追加（邮箱放进 title 便于区分同名）。
+function renderTravelerOptions(list) {
+  const select = travelerSelect();
+  if (!select) return;
+  const current = select.value || OWNER_NAME;
+  const meta = new Map();
+  list.forEach(user => {
+    const name = usernameOf(user);
+    if (name && !meta.has(name)) meta.set(name, user);
+  });
+  // 顺序固定（默认主人 → 后端用户 → 当前值），避免每次展开都重排选项把已打开的原生列表抖掉。
+  const names = [...new Set([OWNER_NAME, ...meta.keys(), current].filter(Boolean))];
+  const existing = [...select.options].map(opt => opt.value);
+  const loading = select.dataset.loading === "1";
+  if (!loading && existing.length === names.length && existing.every((value, i) => value === names[i])) return;
+  const frag = document.createDocumentFragment();
+  names.forEach(name => {
+    const opt = document.createElement("option");
+    opt.value = name;
+    opt.textContent = name;
+    const user = meta.get(name);
+    if (user && typeof user === "object" && (user.email || user.id)) {
+      opt.title = [user.email, user.id ? `#${user.id}` : ""].filter(Boolean).join(" · ");
+    }
+    if (name === OWNER_NAME) opt.defaultSelected = true;   // 表单「清空」后回到默认主人
+    frag.appendChild(opt);
+  });
+  select.replaceChildren(frag);
+  select.value = current;
+  delete select.dataset.loading;
+}
+
+// 保证某个值一定出现在选项里（OCR 试填 / 表单重置 / 后端暂时不可用时都要用）。
+function setTravelerValue(value) {
+  const select = travelerSelect();
+  if (!select) return;
+  const name = String(value || OWNER_NAME).trim() || OWNER_NAME;
+  if (![...select.options].some(opt => opt.value === name)) {
+    const opt = document.createElement("option");
+    opt.value = name;
+    opt.textContent = name;
+    select.add(opt, select.firstElementChild);
+  }
+  select.value = name;
+}
+
+function showTravelerLoading() {
+  const select = travelerSelect();
+  if (!select) return;
+  const opt = document.createElement("option");
+  opt.value = select.value || OWNER_NAME;   // 即使加载中被选中，提交的仍是当前旅客名
+  opt.textContent = "正在从后端读取用户…";
+  select.replaceChildren(opt);
+  select.selectedIndex = 0;
+  select.dataset.loading = "1";   // 标记占位项，数据回来后必须重建（即使一个用户都没有）
+}
+
+// 每次展开都重新查一次后端；同时展开只发一个请求。
+async function refreshTravelerUsers({ quiet = false } = {}) {
+  if (travelerUsersPending) return travelerUsersPending;
+  travelerUsersPending = (async () => {
+    try {
+      renderTravelerOptions(await fetchUsers());
+      travelerUsersLoaded = true;
+    } catch (error) {
+      console.error("录入表单用户列表读取失败", error);
+      renderTravelerOptions([]);   // 后端不可用：至少保住当前值与默认主人，不阻断录入
+      if (!quiet) flashToast(`用户列表读取失败：${escapeHtml(error.message || "后端未连接")}`, 2600);
+    } finally {
+      travelerUsersPending = null;
+    }
+  })();
+  return travelerUsersPending;
+}
+
+// 原生 select 没有「展开」事件，用 pointerdown / 展开型按键当作下拉时机。
+// 首次展开先拦住原生下拉，等 /api/users 回来、选项补齐后再 showPicker()，
+// 免得用户点开看到的是一个只有「读取中…」的空列表。
+function bindTravelerSelect() {
+  const select = travelerSelect();
+  if (!select) return;
+  setTravelerValue(OWNER_NAME);   // 与 JS 里的 OWNER_NAME 配置对齐
+
+  let holdingNativeOpen = false;   // 首次展开：等数据到手前拦住原生下拉
+  const openWithFreshUsers = async event => {
+    const first = !travelerUsersLoaded;
+    const canHold = first && typeof select.showPicker === "function" && event && event.cancelable;
+    if (canHold) {
+      event.preventDefault();
+      holdingNativeOpen = true;
+      showTravelerLoading();
+    }
+    await refreshTravelerUsers();
+    holdingNativeOpen = false;
+    if (canHold) {
+      try {
+        select.focus();
+        select.showPicker();
+      } catch (e) {
+        // 个别浏览器不接受异步后的 showPicker：选项已就绪，提示再点一次即可展开
+        console.warn("无法自动展开旅客下拉", e);
+        flashToast("用户列表已就绪，请再点开「旅客」下拉选择", 2200);
+      }
+    }
+  };
+
+  // 悬停 / 键盘聚焦先预热：真正点开时大多已就绪，不支持 showPicker 的浏览器也能直接看到用户。
+  const prefetch = () => { if (!travelerUsersLoaded) refreshTravelerUsers({ quiet: true }); };
+  select.addEventListener("mouseenter", prefetch);
+  select.addEventListener("focus", prefetch);
+
+  select.addEventListener("pointerdown", event => {
+    if (event.button !== 0) return;
+    if (travelerUsersLoaded) refreshTravelerUsers({ quiet: true });   // 已展开过：后台刷新，不打断当前操作
+    else openWithFreshUsers(event);
+  });
+  // 部分内核用 mousedown 展开原生列表，首加载期间一并拦下（pointerdown 的兜底）。
+  // 只在真的准备 showPicker() 时拦，否则不支持 showPicker 的浏览器会点不开下拉。
+  select.addEventListener("mousedown", event => {
+    if (holdingNativeOpen && event.cancelable) event.preventDefault();
+  });
+  select.addEventListener("keydown", event => {
+    const opens = event.altKey && event.key === "ArrowDown";
+    if (!opens && !["ArrowDown", "ArrowUp", " ", "Enter"].includes(event.key)) return;
+    if (travelerUsersLoaded) refreshTravelerUsers({ quiet: true });
+    else openWithFreshUsers(event);
+  });
+
+  // 「清空」按钮 / form.reset() 之后同步回默认主人。
+  // reset 事件先于恢复默认值触发，故延后一拍再写。
+  els.form.addEventListener("reset", () => setTimeout(() => setTravelerValue(OWNER_NAME), 0));
 }
 
 // 把一组行程的所有城市框进画面
@@ -3603,11 +3838,13 @@ function fillFormFromRecord(record) {
   setField("durationMinutes", record.durationMinutes);
   setField("amountCny", record.amountCny);
   setField("confidence", record.confidence || "partial");
-  setField("traveler", record.traveler || OWNER_NAME);
+  setTravelerValue(record.traveler || OWNER_NAME);
   setField("project", record.project || record.purpose || "");
   setField("notes", record.notes || record.evidence || "");
 }
 
+// 仅供 OCR/AI 粘贴等离线路径使用（纯前端写入）。正常导入请走 pushRecordsToBackend，
+// 否则主页重新向后端查询时这批记录会被覆盖掉。
 function importRecordsToLocal(imported, message) {
   const now = Date.now();
   const stamped = imported.map((item, index) => ({
@@ -3761,7 +3998,12 @@ function bindEvents() {
     });
   });
   document.querySelectorAll("[data-nav]").forEach(btn => {
-    btn.addEventListener("click", () => setActiveView(btn.dataset.nav));
+    btn.addEventListener("click", () => {
+      const view = btn.dataset.nav;
+      setActiveView(view);
+      // 点击「主页（地图 · 时间线）」→ 主动向后端查询全部旅行记录后重绘
+      if (view === "map") refreshRecordsFromBackend();
+    });
   });
   const mapSkinSwatch = document.getElementById("mapSkinSwatch");
   if (mapSkinSwatch) {
@@ -3793,21 +4035,21 @@ function bindEvents() {
   document.getElementById("exportJsonBtn").addEventListener("click", () => download(`travel-log-${new Date().toISOString().slice(0, 10)}.json`, JSON.stringify({ records }, null, 2), "application/json"));
   document.getElementById("exportCsvBtn").addEventListener("click", () => download(`travel-log-${new Date().toISOString().slice(0, 10)}.csv`, "\uFEFF" + toCsv(records), "text/csv;charset=utf-8"));  // BOM：否则 Excel 打开中文乱码
   document.getElementById("resetBtn").addEventListener("click", async () => {
-    // 会清掉本机新增/导入的记录（不可逆），先确认
-    if (!window.confirm("重载会丢弃本机新增、尚未导出的记录，恢复为文件版本。确定重载？")) return;
+    // 重载：丢弃本机缓存，重新向后端查询全部记录（后端不可用时回退内置资料）
+    if (!window.confirm("重载会用后端数据覆盖当前视图（本机未同步的改动会丢失）。确定重载？")) return;
     stopPlayback();
-    localStorage.removeItem(STORAGE_KEY);
+    try { localStorage.removeItem(STORAGE_KEY); } catch (e) { /* 隐私模式 */ }
     if (els.ocrText) els.ocrText.value = "";
-    await loadData({ preferLocal: false });
+    await loadData();
     setupFilters();
     selectedId = records.find(record => record.showInTimeline !== false)?.id || records[0]?.id || "";
     render();
   });
 
-  // 一键清空：把全部行程清掉，做成你自己的空白地图（写入空集合，刷新后保持为空）。
-  // 想找回示例数据用「重载资料」；想永久清空（部署给别人看也是空的）则把 data/travel-log.json 的 records 改成 []。
+  // 一键清空：只清空当前视图与本机缓存。后端记录不会被删除（后端暂无删除接口），
+  // 点「地图」或刷新页面会重新从后端拉回来——想永久删记录需后端提供 DELETE 接口。
   document.getElementById("clearBtn").addEventListener("click", () => {
-    if (!window.confirm("清空全部数据？\n\n地图、时间线、统计都会归零，方便你录入自己的行程。\n（示例数据可随时用「重载资料」找回。）")) return;
+    if (!window.confirm("清空当前视图？\n\n地图、时间线、统计都会归零；但后端已存的记录不会删除，\n点「地图」或刷新页面会重新加载回来。")) return;
     stopPlayback();
     records = [];
     try { localStorage.setItem(STORAGE_KEY, JSON.stringify([], null, 2)); } catch (e) { /* 隐私模式 */ }
@@ -3832,11 +4074,18 @@ function bindEvents() {
         imported = Array.isArray(parsed) ? parsed : parsed.records;
       }
       if (!Array.isArray(imported) || !imported.length) throw new Error("文件里没有 records 数组或为空");
-      records = normalize(imported);
-      localStorage.setItem(STORAGE_KEY, JSON.stringify(records, null, 2));
+      // 导入也写入后端，否则主页重新查询时这批记录会被后端数据覆盖掉
+      const prepared = normalize(imported);
+      els.status.textContent = `正在导入 ${prepared.length} 条行程…`;
+      const { created, failed } = await pushRecordsToBackend(prepared);
+      if (!created.length) throw new Error(failed[0]?.error.message || "后端不可用");
+      records = normalize(created);
+      try { localStorage.setItem(STORAGE_KEY, JSON.stringify(records, null, 2)); } catch (e) { /* 隐私模式 */ }
       setupFilters();
       selectedId = records.find(record => record.showInTimeline !== false)?.id || records[0]?.id || "";
-      els.status.textContent = `已导入 ${records.length} 条行程`;
+      els.status.textContent = failed.length
+        ? `已导入 ${created.length} 条到后端，${failed.length} 条失败（失败项未保留）`
+        : `已导入 ${created.length} 条行程到后端`;
       render();
     } catch (error) {
       els.status.textContent = `导入失败：${error.message || "文件格式无法识别"}（资料未改动）`;
@@ -3912,14 +4161,30 @@ function bindEvents() {
       return;
     }
 
-    records = normalize([...records, item]);
+    // 「加入地图」→ 创建 travel record：POST /api/records（后端 route.go 已注册）。
+    // 先按前端 normalize() 补齐字段，保证发往后端的与本地渲染的记录完全一致。
+    const payload = normalize([item])[0];
+    let saved = payload;
+    let backendSaved = false;
+    if (submitBtn) { submitBtn.disabled = true; submitBtn.textContent = "保存中…"; }
+    try {
+      saved = normalize([await createTravelRecord(payload)])[0];
+      backendSaved = true;
+    } catch (error) {
+      console.error("创建旅行记录失败", error);
+      flashToast(`后端保存失败：${escapeHtml(error.message || "未知错误")}（本次仍加入本机地图）`, 3200);
+    } finally {
+      if (submitBtn) { submitBtn.disabled = false; submitBtn.textContent = prevLabel; }
+    }
+
+    records = normalize([...records, saved]);
     try { localStorage.setItem(STORAGE_KEY, JSON.stringify(records, null, 2)); } catch (e) { /* 隐私模式 */ }
     setupFilters();
-    selectedId = item.id;
-    els.status.textContent = "新路线已加入本机地图";
-    flashToast(`已加入：${escapeHtml(item.title)} ✓`, 1900);
+    selectedId = saved.id;
+    els.status.textContent = backendSaved ? "新路线已保存到后端并加入地图" : "新路线已加入本机地图（后端未保存）";
+    if (backendSaved) flashToast(`已加入：${escapeHtml(saved.title)} ✓`, 1900);
     els.form.reset();
-    els.form.elements.traveler.value = OWNER_NAME;
+    setTravelerValue(OWNER_NAME);
     render();
   });
 }
@@ -3951,6 +4216,7 @@ async function init() {
   bindEvents();
   bindPosterModal();
   bindGeoAutocomplete();   // 录入表单地点输入：任意真实地点在线检索补全
+  bindTravelerSelect();    // 录入表单「旅客」下拉：展开时向后端读取用户
   applySiteTitle();  // 写入自定义标题（SITE_TITLE 配置）
   applyShowMode();   // 恢复上次的「展示/工作台」模式（localStorage 记忆）
   applyTitleVis();   // 恢复上次的「标题报头」显隐（localStorage 记忆）

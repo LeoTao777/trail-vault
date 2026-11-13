@@ -14,11 +14,13 @@ import (
 
 // Server 封装 Gin 引擎与监听地址。
 type Server struct {
-	cfg         *config.ServerConfig
-	frontendDir string // 调试：前端静态文件目录；部署时改为打包产物目录
-	userService service.UserService
-	userHandler *handler.UserHandler
-	log         *zap.Logger
+	cfg                 *config.ServerConfig
+	frontendDir         string // 调试：前端静态文件目录；部署时改为打包产物目录
+	userService         service.UserService
+	userHandler         *handler.UserHandler
+	travelRecordService service.TravelRecordService
+	travelRecordHandler *handler.TravelRecordHandler
+	log                 *zap.Logger
 }
 
 func New(srvCfg *config.ServerConfig, frontendDir string, db *gorm.DB, log *zap.Logger) *Server {
@@ -26,12 +28,18 @@ func New(srvCfg *config.ServerConfig, frontendDir string, db *gorm.DB, log *zap.
 	userService := service.NewUserService(userRepo)
 	userHandler := handler.NewUserHandler(userService)
 
+	travelRecordRepo := repository.NewTravelRecordRepository(db)
+	travelRecordService := service.NewTravelRecordService(travelRecordRepo)
+	travelRecordHandler := handler.NewTravelRecordHandler(travelRecordService)
+
 	return &Server{
-		cfg:         srvCfg,
-		frontendDir: frontendDir,
-		userService: userService,
-		userHandler: userHandler,
-		log:         log,
+		cfg:                 srvCfg,
+		frontendDir:         frontendDir,
+		userService:         userService,
+		userHandler:         userHandler,
+		travelRecordService: travelRecordService,
+		travelRecordHandler: travelRecordHandler,
+		log:                 log,
 	}
 }
 

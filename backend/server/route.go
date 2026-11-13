@@ -19,17 +19,16 @@ func (s *Server) registerRoutes(r *gin.Engine) {
 	r.GET("/api/users", s.userHandler.GetUserList)
 
 	// API: 获取旅行记录数据
-	r.GET("/api/records", func(c *gin.Context) {
-		// 在实际应用中，这里应该从数据库或文件系统读取数据
-		// 这里我们模拟返回一些示例数据
-		c.JSON(200, gin.H{
-			"records": []interface{}{}, // 空数组，实际应用中应该返回真实数据
-			"meta": gin.H{
-				"total":       0,
-				"lastUpdated": "2023-01-01T00:00:00Z",
-			},
-		})
-	})
+	r.GET("/api/records", s.travelRecordHandler.GetTravelRecordList)
+
+	// API: 根据用户名获取旅行记录数据
+	r.GET("/api/records/user/:username", s.travelRecordHandler.GetTRListByUserName)
+
+	// API: 创建旅行记录（录入面板「加入地图」按钮 → POST /api/records）
+	r.POST("/api/records", s.travelRecordHandler.CreateTravelRecord)
+
+	// API: 更新旅行记录
+	// r.PUT("/api/records/:id", s.travelRecordHandler.UpdateTravelRecord)
 
 	// --- 前端静态资源兜底 ---
 	// 未匹配的路由（首页 / 及 app.css、app.js、data/*.js 等）交由 FileServer 托管，
