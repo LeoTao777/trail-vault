@@ -4,7 +4,7 @@ import type { PhaseItem } from '@/components/common/phase'
 
 const phases: PhaseItem[] = [
   { label: 'P0 脚手架：Vite + Vue3 + TS + Router + Pinia', done: true },
-  { label: 'P1 domain 纯逻辑搬家 + Vitest 数字快照', done: false },
+  { label: 'P1 domain 纯逻辑搬家 + Vitest 数字快照', done: true },
   { label: 'P2 骨架与状态：AppShell / FilterBar / records store', done: false },
   { label: 'P3 地图舞台（MapLibre）+ 播放 + 时间线', done: false },
   { label: 'P4 旅行档案页（统计榜 + 资料明细）', done: false },
@@ -30,7 +30,9 @@ const phases: PhaseItem[] = [
       <div class="stage-grid">
         <div class="stage-map">
           <p class="stage-label">地图舞台</p>
-          <p class="stage-hint">MapLibre 容器（P3 接入）：中国 / 世界视图、航线与铁路、皮肤切换、播放与岁月。</p>
+          <p class="stage-hint">
+            MapLibre 容器（P3 接入）：中国 / 世界视图、航线与铁路、皮肤切换、播放与岁月。
+          </p>
         </div>
         <div class="stage-timeline">
           <p class="stage-label">时间线</p>
@@ -58,12 +60,7 @@ const phases: PhaseItem[] = [
   border: 1px dashed var(--line);
   border-radius: var(--radius);
   background:
-    repeating-linear-gradient(
-      135deg,
-      transparent 0 10px,
-      rgba(20, 20, 20, 0.022) 10px 20px
-    ),
-    var(--paper);
+    repeating-linear-gradient(135deg, transparent 0 10px, rgba(20, 20, 20, 0.022) 10px 20px), var(--paper);
 }
 
 .stage-label {

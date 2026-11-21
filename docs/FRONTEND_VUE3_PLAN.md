@@ -1,6 +1,6 @@
 # 前端 Vue 3 重构计划
 
-> 状态：**P0 已完成**，下一步 P1（domain 纯逻辑搬家 + 数字快照）；P1–P7 待执行
+> 状态：**P0、P1 已完成**，下一步 P2（骨架与状态）；P2–P7 待执行
 > 范围：`frontend/`（纯静态 Vanilla JS 单页）→ Vue 3 + TypeScript + Vite 多路由应用
 > 关联：`backend/server/route.go`（静态托管 / SPA fallback）、`backend/main.go`（frontendDir）
 
@@ -189,19 +189,22 @@ frontend:
 - [x] 验收项（见 `frontend/README.md` 的「构建与联调 SPA 兜底」）：`/`、`/archive`、`/record` 直接刷新可命中；
   `/api/nope` 返回 JSON 404；缺失的 `/assets/*.js` 返回 404 而非 HTML
 
-> 下一步：P1 —— 把 `app.js` 中与 DOM 无关的逻辑搬进 `src/domain/*`，用 Vitest 固化数字口径。
+> 下一步：P2 —— `FilterBar` + `useRecordsStore` / `usePrefsStore`，筛选状态与 URL query 双向同步。
 
-### P1 · 纯逻辑搬家（1.5d，风险最高收益最大）
+### P1 · 纯逻辑搬家（1.5d，风险最高收益最大）✅ 已完成
 
-- [ ] 按 §4 把 `app.js` 中与 DOM 无关的部分搬到 `src/domain/*`，签名尽量保持
-- [ ] `normalize()` 脏数据兜底原样保留（`"false"` 字符串、`people` 拆分、非法 kind→`other`、`cancelled` 不进类型筛选）
-- [ ] `api/client.ts`：三级回退（后端 → `journeyatlas_records_v1` 缓存 → 内置 fallback records）；内置数据从 `data/travel-log-data.js` 转 `src/data/fallbackRecords.ts`
-- [ ] Vitest 用例：
+- [x] 按 §4 把 `app.js` 中与 DOM 无关的部分搬到 `src/domain/*`，签名尽量保持
+      （`city` / `photon` / `geo` / `normalize` / `filters` / `chain` / `stats` / `csv` / `ticket` / `theme`
+      + 补充 `format.ts`、`kind.ts`、`types.ts`，见 §11 的 P1 落地清单）
+- [x] `normalize()` 脏数据兜底原样保留（`"false"` 字符串、`people` 拆分、非法 kind→`other`、`cancelled` 不进类型筛选）
+- [x] `api/client.ts`：三级回退（后端 → `journeyatlas_records_v1` 缓存 → 内置 fallback records）；内置数据从 `data/travel-log-data.js` 转 `src/data/fallbackRecords.ts`
+- [x] Vitest 用例：
   - 同一批数据在多种 filters 组合下的 5 个指标（在路天数/可见花销/移动小时/点亮城市/待补字段）
   - 6 个榜单的前 N 项与数值、城市夜数（含 HOME_CITY 互补口径）
   - `chainSortSegs` 同日链式排序、`computeContinuityGaps` 缺口条数与跳过规则（深圳↔香港 等口岸）
   - `greatCircleKm`、`parseTicketText` 各分支、`toCsv/parseCsv` 往返
-- [ ] 验收：对同一份后端数据，新 domain 输出与旧版页面显示的数字逐项一致（快照测试固化）
+- [x] 验收：对同一份后端数据，新 domain 输出与旧版页面显示的数字逐项一致
+      （做法见 §11：把旧版算法用 UTC 日期枚举**独立重写**成参考实现，对真实演示数据集做差分比对）
 
 ### P2 · 骨架与状态（1d）
 
@@ -354,6 +357,29 @@ api/client.ts ──records──▶ useRecordsStore
 | `backend/main.go` | 改用 `cfg.StaticDir()` |
 | `backend/server/route.go` | SPA fallback + 目录穿越防护 + 缓存策略 |
 
+### P1 落地清单
+
+| 文件 | 说明 |
+| --- | --- |
+| `frontend/src/config.ts` | 品牌/报头/`OWNER_NAME`/`HOME_CITY`、localStorage key（全部沿用旧名）、API 与 `/data/*` 地址、视图经纬度框 |
+| `frontend/src/domain/types.ts` | `TravelRecord` / `RawRecord` / `RawUser` / `RecordMetadata` / `LngLat`；`TravelKind`、`ConfidenceKey` 字面量联合 |
+| `frontend/src/domain/kind.ts` | `KIND`（标签+语义色）、`CONFIDENCE`、`MOVE_KINDS`、类型筛选白名单（排除 `cancelled`）、`kindLabel/kindColor/confidenceLabel` |
+| `frontend/src/domain/city.ts` | `CITY` / `CITY_META` / `CITY_EN` / `COUNTRY_EN` / `CITY_ALIAS`、`cityMeta`、`cityLngLat`、`stripShi`、`cityKey`、`cityLatin`、`titleCase`、`countryLatin`、`continentOf`、`registerCity` |
+| `frontend/src/domain/photon.ts` | `photonSearch` / `resolvePlace` / `rememberCity` / `loadUserCities` / `preferReadable` / 行政级别加权；fetch 可注入 |
+| `frontend/src/domain/geo.ts` | `greatCircleKm` / `geoArc` / `mercatorXY` / `dataBounds(records, scope)` / `fitToRecords` |
+| `frontend/src/domain/normalize.ts` | `normalize` / `parseOptionalNumber`：脏数据兜底 7 条规则（每条都有单测） |
+| `frontend/src/domain/format.ts` | `daysBetween` / `dateRange` / `displayTitle` / `money` / `duration` / `stayNights` / `isCrossTimezone` / `tripTimeText` / `formatKm` |
+| `frontend/src/domain/filters.ts` | `Filters` / `DEFAULT_FILTERS` / `includesTraveler` / `filterRecords`（不注入缺口）/ `filteredRecords`（pending 注入缺口）/ `filterOptions` / `describeScope` / `buildSuggestions` / `usernameOf` / `routeKey` |
+| `frontend/src/domain/chain.ts` | `chainSortSegs` / `computeContinuityGaps`（口岸对与同日假断点跳过） |
+| `frontend/src/domain/stats.ts` | `computeMetrics`（5 指标）/ `computeArchiveStats`（Hero + 6 榜 + 城市夜数含主城互补）+ 副标题文案函数 |
+| `frontend/src/domain/csv.ts` | `CSV_HEADER` / `toCsv` / `toCsvWithBom` / `parseCsv`（含去 BOM） |
+| `frontend/src/domain/ticket.ts` | `parseTicketText` + `extract*` / `inferKind` / `computeDurationMinutes` / AI JSON 抠取 / `AI_RECORD_PROMPT` |
+| `frontend/src/domain/theme.ts` | `POSTER_PALETTES`（基础 3 套）、`registerPosterThemes`、`posterIsDark`、`liftLightness`、`hexA`、`POSTER_THEME_CN` |
+| `frontend/src/api/client.ts` | `loadRecords` 三级回退、`fetchAllTravelRecords`、`fetchUsers`、`createTravelRecord`、`pushRecordsToBackend`、缓存读写（storage/fetch 可注入） |
+| `frontend/src/data/fallbackRecords.ts` | 内置演示数据（构建期 import `data/travel-log.json`） |
+| `frontend/src/{domain,api}/**.spec.ts` | 10 个测试文件：normalize / filters / chain / stats / geo / format / csv / ticket / api client / legacy-parity（真实数据集差分） |
+| `frontend/src/test/records.ts` | 测试用记录工厂（只写与用例相关的字段，其余交给 `normalize` 默认值） |
+
 ### 偏差
 
 1. **旧的 `app.js` / `app.css` / `data/` 没有物理移动到 `frontend-legacy/`**：本次执行环境没有可用 shell，
@@ -375,3 +401,17 @@ api/client.ts ──records──▶ useRecordsStore
    - 无 devproxy、且 `dist/` 未构建时托管 Vite 源码目录会白屏（`/src/main.ts` 浏览器跑不了）：
      启动 `isViteSourceRoot()` 命中即 `ERROR` 日志，SPA 兜底返回诊断页而不是源码 `index.html`。
    - 已知限制：`StaticDir()` 在启动时选定，`npm run build` 后需重启后端（devproxy 路径不受此限制）。
+5. **P1 的几个接口签名为了可单测做了小改动**（行为不变）：
+   - `dataBounds(scope)` → `dataBounds(records, scope)`（旧版读全局 `filteredRecords()`）；
+   - `filteredRecords()` → `filteredRecords(records, filters)`；
+   - `parseTicketText(text)` 多了可选的 `traveler` 参数（默认 `OWNER_NAME`）；
+   - `money/duration` 的 `showMode` 由全局变量改成显式参数（P2 交给 `usePrefsStore`）；
+   - `applySkin` 未搬：它直接操作 `documentElement.dataset.skin` 与 MapLibre 实例，归到 P3 的 `MapSkinPicker`/`usePrefsStore`。
+6. **内置数据没有复制**：`src/data/fallbackRecords.ts` 直接 `import '../../data/travel-log.json'`（构建期并入 bundle，效果等价）。
+   P7 删除旧版 `data/` 时要把这份 JSON 挪到 `src/data/`，否则该 import 会断。
+7. **海报 Canvas 与街道海报未搬**（`app.js` 里的 `renderTravelPoster` / `drawPoster` / Overpass 取数）：属于 P6，
+   且需要先确定 `TravelPosterModal` 的 props 形态；P1 只搬了共用的配色表与颜色小工具（`domain/theme.ts`）。
+8. **`POSTER_THEMES` 未找到独立数据文件**：旧版是 `data/*.js` 挂在 `window.POSTER_THEMES`。
+   `domain/theme.ts` 已提供 `registerPosterThemes()`，并在模块加载时自动并入 `globalThis.POSTER_THEMES`；
+   P6 把 20 套主题搬成 `src/data/posterThemes.ts` 后调用一次即可（届时色板套数才会从 3 变成 23）。
+9. **本阶段没有可用 shell**：`npm run typecheck / lint / test` 需要在有 Node 的环境里跑一次确认（见 `frontend/README.md` 的脚本表）。

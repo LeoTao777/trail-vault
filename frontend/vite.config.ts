@@ -37,7 +37,7 @@ export default defineConfig(({ mode }) => {
       environment: 'node',
       include: ['src/**/*.spec.ts', 'src/**/*.test.ts'],
       globals: false,
-      // P0 还没有测试文件，先不因「没有测试」而失败；P1 起 domain 单测会填满这里
+      // P1 起 domain/api 单测已落地；保留 passWithNoTests 以便只跑局部用例时不报错
       passWithNoTests: true,
     },
   }

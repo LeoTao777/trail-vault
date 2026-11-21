@@ -7,14 +7,14 @@ Everything lives in three files: `index.html`, `app.js`, `app.css`. No build ste
 Top of `app.js`:
 
 ```js
-const APP_NAME = "Roamap";        // project name on the loading screen
+const APP_NAME = 'Roamap' // project name on the loading screen
 const SITE_TITLE = {
-  eyebrow: "ROAMAP",         // small line above the title; "" hides it
-  title:   "Nova",           // \n breaks the line (single line here)
-  docTitle:"Nova · 行旅地图",  // browser tab
-};
-const OWNER_NAME = "Nova Kepler";  // default traveler; the "self" option in the traveler filter
-const HOME_CITY  = "上海";          // home city — used for the "nights at home" estimate
+  eyebrow: 'ROAMAP', // small line above the title; "" hides it
+  title: 'Nova', // \n breaks the line (single line here)
+  docTitle: 'Nova · 行旅地图', // browser tab
+}
+const OWNER_NAME = 'Nova Kepler' // default traveler; the "self" option in the traveler filter
+const HOME_CITY = '上海' // home city — used for the "nights at home" estimate
 ```
 
 You can also edit the masthead **at runtime**: `···` menu → “自定义标题”. That override saves to `localStorage` and wins over `SITE_TITLE` until you hit “恢复默认”.
@@ -28,9 +28,9 @@ You usually don't need to do anything: the entry form **geocodes any place you t
 To **hardcode** a city (so it's always available, with a latin name for posters and country/continent for stats), add it to `app.js`:
 
 ```js
-const CITY      = { /* … */ "大理": { lat: 25.6065, lng: 100.2676 } };
-const CITY_EN   = { /* … */ "大理": "DALI" };
-const CITY_META = { /* … */ "大理": { country: "中国", continent: "亚洲" } }; // omit if mainland China
+const CITY = { /* … */ 大理: { lat: 25.6065, lng: 100.2676 } }
+const CITY_EN = { /* … */ 大理: 'DALI' }
+const CITY_META = { /* … */ 大理: { country: '中国', continent: '亚洲' } } // omit if mainland China
 ```
 
 ## 3. Real rail tracks

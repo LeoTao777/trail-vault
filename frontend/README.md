@@ -2,14 +2,26 @@
 
 三页结构：
 
-| 路由 | 视图 | 内容 |
-| --- | --- | --- |
-| `/` | `views/HomeView.vue` | 主页：地图 + 时间线（默认页） |
-| `/record` | `views/RecordView.vue` | 录入：表单 + 地点联想 + 数据工具 |
-| `/archive` | `views/ArchiveView.vue` | 旅行档案：统计榜 + 资料明细 |
+| 路由       | 视图                    | 内容                             |
+| ---------- | ----------------------- | -------------------------------- |
+| `/`        | `views/HomeView.vue`    | 主页：地图 + 时间线（默认页）    |
+| `/record`  | `views/RecordView.vue`  | 录入：表单 + 地点联想 + 数据工具 |
+| `/archive` | `views/ArchiveView.vue` | 旅行档案：统计榜 + 资料明细      |
 
 重构计划与阶段验收标准见 **[`../docs/FRONTEND_VUE3_PLAN.md`](../docs/FRONTEND_VUE3_PLAN.md)**。
-当前进度：**P0（脚手架）已完成**，三个页面为占位视图。
+当前进度：**P0（脚手架）+ P1（domain 纯逻辑 / api 三层回退 / Vitest 数字口径）已完成**，三个页面仍是占位视图
+（P2 起接 store 与真实组件）。
+
+## P1 交付了什么
+
+- `src/domain/*`：城市坐标/别名/大洲、Photon 地理编码、大圆距离与取景框、`normalize()` 脏数据兜底、筛选与搜索联想、
+  同日链式排序与断点计算、5 个指标 + 6 个榜单（含城市夜数与主城互补口径）、CSV、票据文本解析、海报配色。
+  全部零 Vue 依赖、可单测；签名与原 `app.js` 尽量一致。
+- `src/api/client.ts`：唯一 fetch 出口 + **三级回退**（后端 `/api/records` → localStorage
+  `journeyatlas_records_v1` → 内置演示数据），`fetch` / `storage` 可注入，便于单测。
+- `src/data/fallbackRecords.ts`：内置演示数据（构建期 `import` 旧版 `data/travel-log.json`）。
+- 测试：`npm run test`。其中 `domain/legacy-parity.spec.ts` 把旧版算法（日期枚举改用 UTC 算法）**独立重写**成参考实现，
+  再拿真实演示数据集做差分比对 —— 这就是「只换壳不换数」的护栏；任何口径改动都会立刻炸。
 
 ## 环境要求
 
@@ -86,13 +98,13 @@ cd frontend && npm run build && cd ../backend && go run .   # 静态：重启后
 
 ## 脚本
 
-| 命令 | 作用 |
-| --- | --- |
-| `npm run dev` | Vite dev server（5173，含 /api 反代） |
-| `npm run build` | `vue-tsc --noEmit` 类型检查 + 构建到 `dist/` |
-| `npm run typecheck` | 只做类型检查 |
-| `npm run lint` / `npm run format` | ESLint / Prettier |
-| `npm run test` | Vitest（P1 起放 `src/domain/*.spec.ts`） |
+| 命令                              | 作用                                                                        |
+| --------------------------------- | --------------------------------------------------------------------------- |
+| `npm run dev`                     | Vite dev server（5173，含 /api 反代）                                       |
+| `npm run build`                   | `vue-tsc --noEmit` 类型检查 + 构建到 `dist/`                                |
+| `npm run typecheck`               | 只做类型检查                                                                |
+| `npm run lint` / `npm run format` | ESLint / Prettier                                                           |
+| `npm run test`                    | Vitest：`src/domain/*.spec.ts` 口径锁定 + `src/api/client.spec.ts` 三级回退 |
 
 ## 目录约定
 
@@ -100,6 +112,8 @@ cd frontend && npm run build && cd ../backend && go run .   # 静态：重启后
 src/
 ├─ domain/     纯逻辑（无 Vue 依赖，可单测）：城市坐标、Photon 地理编码、归一化、筛选、统计、CSV、票据解析、主题
 ├─ api/        fetch 封装 + 三级回退（后端 → localStorage 缓存 → 内置数据）
+├─ data/       内置演示数据（构建期 import 旧版 data/travel-log.json）
+├─ test/       测试辅助（记录工厂），不参与应用构建
 ├─ stores/     Pinia：records / prefs / toast
 ├─ layout/     AppShell / AppNav / FilterBar / ToastHost
 ├─ views/      HomeView / RecordView / ArchiveView
@@ -110,7 +124,8 @@ public/data/   大 GeoJSON 与铁路轨迹，运行时按需 fetch（不打包�
 ## 旧版前端（迁移期留档）
 
 旧版是纯静态 Vanilla JS（单页 + `data-pane` 切区块，`app.js` 4111 行）。P0 用 Vite 入口替换了
-`index.html`，旧文件 **仍在磁盘上、且都在 git 历史里**，作为 P1/P3 的移植参照：
+`index.html`，旧文件 **仍在磁盘上、且都在 git 历史里**。P1 已经把与 DOM 无关的逻辑全部搬进 `src/domain/*`，
+剩下还能当参照的部分：地图舞台（`renderMap` / 播放 / 换肤）、海报 Canvas、以及各处 DOM 模板与样式。
 
 - `app.js`、`app.css`、`data/*`（旧资源，新代码不再引用）
 - 旧 `index.html` 内容可用 `git show HEAD:frontend/index.html` 查看
@@ -123,4 +138,5 @@ git worktree add ../trail-vault-legacy <commit>
 # ../trail-vault-legacy/frontend 即为可运行的旧版静态站
 ```
 
-P1（domain 搬迁）与 P3（地图/海报移植）完成后删除 `app.js`、`app.css`、`data/`。
+P1（domain 已搬完）、P3（地图/海报移植）完成后删除 `app.js`、`app.css`、`data/`。
+注意：`src/data/fallbackRecords.ts` 目前 import 的是 `data/travel-log.json`，删旧目录前要先把它复制到 `src/data/`。

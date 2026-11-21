@@ -16,7 +16,8 @@ body {
   background:
     linear-gradient(90deg, rgba(20, 20, 20, 0.035) 1px, transparent 1px) 0 0 / 72px 72px,
     linear-gradient(180deg, rgba(20, 20, 20, 0.025) 1px, transparent 1px) 0 0 / 72px 72px,
-    radial-gradient(circle at 16% 12%, rgba(184, 66, 50, 0.07), transparent 30%), var(--paper);
+    radial-gradient(circle at 16% 12%, rgba(184, 66, 50, 0.07), transparent 30%),
+    var(--paper);
   font-family: var(--serif);
   font-size: 15px;
   line-height: 1.6;
