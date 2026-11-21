@@ -7,6 +7,9 @@
 
 export const APP_NAME = 'Roamap'
 
+/** 没有自定义标题时，标签页按「<页名> · TrailVault」拼接（P0 router.afterEach 里的常量）。 */
+export const DOC_TITLE_SUFFIX = 'TrailVault'
+
 export const SITE_TITLE = {
   eyebrow: 'ROAMAP',
   title: 'LeoTao\n行旅地图',

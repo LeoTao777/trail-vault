@@ -9,8 +9,8 @@
 | `/archive` | `views/ArchiveView.vue` | 旅行档案：统计榜 + 资料明细      |
 
 重构计划与阶段验收标准见 **[`../docs/FRONTEND_VUE3_PLAN.md`](../docs/FRONTEND_VUE3_PLAN.md)**。
-当前进度：**P0（脚手架）+ P1（domain 纯逻辑 / api 三层回退 / Vitest 数字口径）已完成**，三个页面仍是占位视图
-（P2 起接 store 与真实组件）。
+当前进度：**P0（脚手架）+ P1（domain 纯逻辑 / api 三层回退 / Vitest 数字口径）+ P2（骨架与状态）已完成**，
+三个页面仍是「状态联调」占位视图（P3/P4/P5 换成地图、榜单、表单）。
 
 ## P1 交付了什么
 
@@ -22,6 +22,36 @@
 - `src/data/fallbackRecords.ts`：内置演示数据（构建期 `import` 旧版 `data/travel-log.json`）。
 - 测试：`npm run test`。其中 `domain/legacy-parity.spec.ts` 把旧版算法（日期枚举改用 UTC 算法）**独立重写**成参考实现，
   再拿真实演示数据集做差分比对 —— 这就是「只换壳不换数」的护栏；任何口径改动都会立刻炸。
+
+## P2 交付了什么
+
+- `src/stores/records.ts`：全站唯一的数据 / 筛选 / 选中态。`ensureLoaded()` 走 `api/client.ts` 的三级回退，
+  `refresh()` 只认后端（后端没连上就保留上一次资料），`filteredRecords` = P1 的 `domain/filteredRecords`
+  （`confidence=pending` 时注入动态缺口），另有 `ledgerRecords` / `metrics` / `options` / `scopeLabel` / `selectedRecord`。
+  选中段被筛掉时按旧版 `render()` 语义自动落到当前可见的第一段。
+- `src/stores/prefs.ts`：皮肤 / 指标可见性 / 展示模式 / 标题显隐 / 自定义标题，**localStorage key 全部沿用旧版名字**；
+  坏缓存静默回默认。DOM 层面的 `data-skin` / body class / `document.title` 由 `applyDocument()` 统一写。
+- `src/domain/query.ts` + `src/composables/filterQuery.ts`：筛选 ↔ URL query 双向同步。
+  `/`、`/archive` 共用；深链（含 query）URL 说了算，无 query 时 store 说了算并 `router.replace` 写回，
+  所以三页切换后筛选仍一致、链接可收藏、浏览器前进后退可用；默认口径不写参数。
+  `/?focus=<id>` 会在资料加载后高亮对应的一段（P4 的档案页跳回主页会用）。
+- `src/layout/FilterBar.vue`：四个下拉 + 重置 + 主页「刷新资料」+ 口径 / 条数 / 来源状态行，
+  选项全部由 `filterOptions()` 从数据推导；`src/components/common/HelpDialog.vue` 把旧版 `HELP_HTML` 模板化，
+  去掉 `v-html`，支持 Esc / 遮罩 / 焦点陷阱。
+- `src/styles/layout.css`：三页共享的表单、按钮、筛选栏与状态面板原语；`main.ts` 引入。
+- 测试：`domain/query.spec.ts`、`domain/prefs.spec.ts`、`stores/records.spec.ts`（纯逻辑 + Pinia，不依赖 DOM / 网络）。
+
+### P2 手工验收清单
+
+1. `/`、`/record`、`/archive` 三页互相切换，页头导航高亮正确；主页/档案页显示同一个 `FilterBar`。
+2. 在 `/` 选 `年份=2024`、`旅客=全部旅客` → 地址栏变成 `/?year=2024&traveler=all`；
+   点「旅行档案」→ `/archive?year=2024&traveler=all`，筛选和「可见 / 全部」条数保持一致。
+3. 直接刷新 `/archive?year=2024&kind=rail`、另开标签页打开该链接，筛选与统计数字都还原。
+4. 浏览器前进/后退在三页之间往返，筛选不丢、不白屏；点「重置筛选」后地址栏里的四个筛选键消失
+   （若当前有 `?focus=<id>` 会保留，它表示选中段而不是筛选条件）。
+5. `/?focus=<已存在的记录 id>` 刷新后「当前一段」显示该段；若该段被当前筛选挡住，自动清掉筛选再定位。
+6. 页头「使用说明」可打开弹层，Esc / 点遮罩 / 关闭按钮都能关，焦点回到触发按钮。
+7. 断网（后端未启动）时首屏仍显示内置/缓存资料，主页「刷新资料」提示后端未连接且不清空现有资料。
 
 ## 环境要求
 
@@ -104,21 +134,23 @@ cd frontend && npm run build && cd ../backend && go run .   # 静态：重启后
 | `npm run build`                   | `vue-tsc --noEmit` 类型检查 + 构建到 `dist/`                                |
 | `npm run typecheck`               | 只做类型检查                                                                |
 | `npm run lint` / `npm run format` | ESLint / Prettier                                                           |
-| `npm run test`                    | Vitest：`src/domain/*.spec.ts` 口径锁定 + `src/api/client.spec.ts` 三级回退 |
+| `npm run test`                    | Vitest：`domain/*.spec.ts` 口径锁定 + `api/client.spec.ts` 三级回退 + `stores/records.spec.ts` 筛选/选中态 |
 
 ## 目录约定
 
 ```
 src/
-├─ domain/     纯逻辑（无 Vue 依赖，可单测）：城市坐标、Photon 地理编码、归一化、筛选、统计、CSV、票据解析、主题
-├─ api/        fetch 封装 + 三级回退（后端 → localStorage 缓存 → 内置数据）
-├─ data/       内置演示数据（构建期 import 旧版 data/travel-log.json）
-├─ test/       测试辅助（记录工厂），不参与应用构建
-├─ stores/     Pinia：records / prefs / toast
-├─ layout/     AppShell / AppNav / FilterBar / ToastHost
-├─ views/      HomeView / RecordView / ArchiveView
-└─ components/ map / timeline / archive / record / poster / common
-public/data/   大 GeoJSON 与铁路轨迹，运行时按需 fetch（不打包）
+├─ domain/       纯逻辑（无 Vue 依赖，可单测）：城市坐标、Photon 地理编码、归一化、筛选、统计、CSV、票据解析、主题、query、prefs
+├─ api/          fetch 封装 + 三级回退（后端 → localStorage 缓存 → 内置数据）
+├─ data/          内置演示数据（构建期 import 旧版 data/travel-log.json）
+├─ test/          测试辅助（记录工厂），不参与应用构建
+├─ stores/        Pinia：records / prefs / toast
+├─ composables/   filterQuery（URL query ↔ 筛选状态双向同步）
+├─ layout/        AppShell / AppNav / FilterBar / ToastHost
+├─ styles/        tokens.css / base.css / layout.css
+├─ views/         HomeView / RecordView / ArchiveView
+└─ components/    map / timeline / archive / record / poster / common
+public/data/     大 GeoJSON 与铁路轨迹，运行时按需 fetch（不打包）
 ```
 
 ## 旧版前端（迁移期留档）

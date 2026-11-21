@@ -1,7 +1,7 @@
 import { OWNER_NAME } from '@/config'
 
-import { normalize } from './normalize'
-import type { RawRecord, TravelRecord } from './types'
+import { normalize } from '@/domain/normalize'
+import type { RawRecord, TravelRecord } from '@/domain/types'
 
 /**
  * 测试用记录工厂：补齐让 normalize() 不再改写的「正常」默认值，

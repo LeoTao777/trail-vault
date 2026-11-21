@@ -1,5 +1,7 @@
 import { createRouter, createWebHistory, type RouteRecordRaw } from 'vue-router'
 
+import { DOC_TITLE_SUFFIX } from '@/config'
+import { usePrefsStore } from '@/stores/prefs'
 import HomeView from '@/views/HomeView.vue'
 
 // 三条路由 = 三张页面：主页（地图 + 时间线）/ 录入 / 旅行档案。
@@ -35,11 +37,15 @@ const router = createRouter({
   },
 })
 
-const SITE_NAME = 'TrailVault'
-
+// 标签页标题交给 prefs store：自定义标题（yw-site-title）优先，否则按路由页名拼。
+// 初始导航时 Pinia 可能尚未激活，try/catch 退回纯标题，prefs.load() 之后再纠正。
 router.afterEach((to) => {
-  const title = typeof to.meta.title === 'string' ? to.meta.title : ''
-  document.title = title ? `${title} · ${SITE_NAME}` : `${SITE_NAME} · 行旅地图`
+  const pageTitle = typeof to.meta.title === 'string' ? to.meta.title : ''
+  try {
+    usePrefsStore().setPageTitle(pageTitle)
+  } catch {
+    document.title = pageTitle ? `${pageTitle} · ${DOC_TITLE_SUFFIX}` : `${DOC_TITLE_SUFFIX} · 行旅地图`
+  }
 })
 
 export default router

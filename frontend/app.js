@@ -14,10 +14,10 @@ const SITE_TITLE = {
 }
 
 // 站点主人 / 默认旅客名 —— 开源后改成你自己的；示例为虚构人物「Nova Kepler」。
-const OWNER_NAME = 'Nova Kepler'
+const OWNER_NAME = 'Leotao'
 
 // 常居城市 —— 用于"在家夜数"的互补推算；改成你自己的主城。
-const HOME_CITY = '上海'
+const HOME_CITY = '南京'
 
 const STORAGE_KEY = 'journeyatlas_records_v1'
 const DATA_URL = '/api/records'
@@ -785,16 +785,16 @@ function dataBounds(scope) {
     any = false
   filteredRecords().forEach((r) => {
     if (r.countsAsVisited === false) return
-    ;[r.origin, r.destination].forEach((c) => {
-      const ll = cityLngLat(c)
-      if (!ll) return
-      if (scope === 'china' && !inChina(ll[0], ll[1])) return
-      any = true
-      minLng = Math.min(minLng, ll[0])
-      maxLng = Math.max(maxLng, ll[0])
-      minLat = Math.min(minLat, ll[1])
-      maxLat = Math.max(maxLat, ll[1])
-    })
+      ;[r.origin, r.destination].forEach((c) => {
+        const ll = cityLngLat(c)
+        if (!ll) return
+        if (scope === 'china' && !inChina(ll[0], ll[1])) return
+        any = true
+        minLng = Math.min(minLng, ll[0])
+        maxLng = Math.max(maxLng, ll[0])
+        minLat = Math.min(minLat, ll[1])
+        maxLat = Math.max(maxLat, ll[1])
+      })
   })
   if (!any) {
     const b = scope === 'world' ? WORLD_BOUNDS : CHINA_BOUNDS
@@ -834,9 +834,9 @@ function normalize(list) {
       const people = Array.isArray(item.people)
         ? item.people
         : String(item.people || item.traveler || '')
-            .split(/[、,，/]/)
-            .map((value) => value.trim())
-            .filter(Boolean)
+          .split(/[、,，/]/)
+          .map((value) => value.trim())
+          .filter(Boolean)
 
       return {
         ...item,
@@ -1171,25 +1171,25 @@ function renderStatsPanel(list) {
   const maxVisits = Math.max(1, ...cityTopN.map((c) => c.visits))
   els.cityRank.innerHTML = cityTopN.length
     ? cityTopN
-        .map((c) => {
-          const w =
-            anyNights && c.nights > 0
-              ? Math.max(8, Math.sqrt(c.nights / maxNights) * 100)
-              : Math.max(6, (c.visits / maxVisits) * 100)
-          const num = c.nights > 0 ? `${c.nights}晚·${c.visits}次` : `${c.visits}次`
-          return `<li data-city="${escapeHtml(stripShi(c.name))}" data-country="${escapeHtml(cityMeta(c.name).country)}"><span class="rk-name">${escapeHtml(c.name)}</span><span class="rk-bar" style="--w:${w.toFixed(1)}%"><i style="background:var(--rail)"></i></span><span class="rk-num">${num}</span></li>`
-        })
-        .join('')
+      .map((c) => {
+        const w =
+          anyNights && c.nights > 0
+            ? Math.max(8, Math.sqrt(c.nights / maxNights) * 100)
+            : Math.max(6, (c.visits / maxVisits) * 100)
+        const num = c.nights > 0 ? `${c.nights}晚·${c.visits}次` : `${c.visits}次`
+        return `<li data-city="${escapeHtml(stripShi(c.name))}" data-country="${escapeHtml(cityMeta(c.name).country)}"><span class="rk-name">${escapeHtml(c.name)}</span><span class="rk-bar" style="--w:${w.toFixed(1)}%"><i style="background:var(--rail)"></i></span><span class="rk-num">${num}</span></li>`
+      })
+      .join('')
     : '<li class="rk-empty">暂无</li>' // 城市=停留 → 青瓷绿粗条
   // 高频路线：纯文字榜 + 旧体序号——与条形榜形态彻底区分
   const routeTop = [...routeCount.entries()].sort((a, b) => b[1] - a[1]).slice(0, 10)
   els.routeRank.innerHTML = routeTop.length
     ? routeTop
-        .map(
-          ([name, n], i) =>
-            `<li data-cities="${escapeHtml(name.split(' ⇌ ').map(stripShi).join(','))}"><span class="rk-idx">${String(i + 1).padStart(2, '0')}</span><span class="rk-name">${escapeHtml(name)}</span><span class="rk-dots"></span><span class="rk-num">${n}</span></li>`,
-        )
-        .join('')
+      .map(
+        ([name, n], i) =>
+          `<li data-cities="${escapeHtml(name.split(' ⇌ ').map(stripShi).join(','))}"><span class="rk-idx">${String(i + 1).padStart(2, '0')}</span><span class="rk-name">${escapeHtml(name)}</span><span class="rk-dots"></span><span class="rk-num">${n}</span></li>`,
+      )
+      .join('')
     : '<li class="rk-empty">暂无</li>'
   const countryTop = [...countries.entries()].sort((a, b) => b[1] - a[1])
   els.countryList.innerHTML = countryTop.length
@@ -1211,11 +1211,11 @@ function renderStatsPanel(list) {
     const yearMax = Math.max(1, ...yearRows.map((e) => e[1].n))
     els.yearRank.innerHTML = yearRows.length
       ? yearRows
-          .map(
-            ([y, e]) =>
-              `<li><span class="rk-name">${y}</span><span class="rk-bar" style="--w:${Math.max(4, (e.n / yearMax) * 100).toFixed(1)}%"><i style="background:var(--red)"></i></span><span class="rk-num">${e.n}次</span></li>`,
-          )
-          .join('')
+        .map(
+          ([y, e]) =>
+            `<li><span class="rk-name">${y}</span><span class="rk-bar" style="--w:${Math.max(4, (e.n / yearMax) * 100).toFixed(1)}%"><i style="background:var(--red)"></i></span><span class="rk-num">${e.n}次</span></li>`,
+        )
+        .join('')
       : '<li class="rk-empty">暂无</li>' // 年度=时间轴 → 赭红
   }
 
@@ -1227,11 +1227,11 @@ function renderStatsPanel(list) {
     const kindMax = Math.max(1, ...kindRows.map((e) => e[1]))
     els.kindRank.innerHTML = kindRows.length
       ? kindRows
-          .map(
-            ([k, n]) =>
-              `<li><span class="rk-name">${escapeHtml(KIND[k] ? KIND[k].label : k)}</span><span class="rk-bar" style="--w:${Math.max(4, (n / kindMax) * 100).toFixed(1)}%"><i style="background:${KIND[k] ? KIND[k].color : 'var(--other)'}"></i></span><span class="rk-num">${n}</span></li>`,
-          )
-          .join('')
+        .map(
+          ([k, n]) =>
+            `<li><span class="rk-name">${escapeHtml(KIND[k] ? KIND[k].label : k)}</span><span class="rk-bar" style="--w:${Math.max(4, (n / kindMax) * 100).toFixed(1)}%"><i style="background:${KIND[k] ? KIND[k].color : 'var(--other)'}"></i></span><span class="rk-num">${n}</span></li>`,
+        )
+        .join('')
       : '<li class="rk-empty">暂无</li>' // 出行方式=各自语义色，与地图图例呼应
   }
 
@@ -1614,43 +1614,43 @@ async function photonSearch(q) {
       .catch(() => ({ features: [] }))
   const [jd, je] = await Promise.all([grab('default'), grab('en')])
   const enById = new Map()
-  ;(je.features || []).forEach((f) => {
-    const p = f.properties || {}
-    if (p.osm_id != null) enById.set(`${p.osm_type}/${p.osm_id}`, p)
-  })
+    ; (je.features || []).forEach((f) => {
+      const p = f.properties || {}
+      if (p.osm_id != null) enById.set(`${p.osm_type}/${p.osm_id}`, p)
+    })
   const out = [],
     seen = new Set()
-  ;(jd.features || []).forEach((f) => {
-    if (!f.geometry || f.geometry.type !== 'Point') return
-    const [lng, lat] = f.geometry.coordinates
-    const d = f.properties || {}
-    const e = (d.osm_id != null && enById.get(`${d.osm_type}/${d.osm_id}`)) || {}
-    const cc = String(d.countrycode || e.countrycode || '').toUpperCase()
-    const domestic = ['CN', 'HK', 'MO', 'TW'].includes(cc) || d.country === '中国' || d.country === 'China'
-    const name = preferReadable(d.name || d.city || d.county || d.district, e.name || e.city || e.county) || q
-    const region = preferReadable(d.state || d.city, e.state || e.city)
-    const country = preferReadable(d.country, e.country)
-    const parts = domestic
-      ? [region, preferReadable(d.county || d.city || d.district, e.county || e.city)]
-      : [region, country]
-    const ctx = [...new Set(parts.filter((x) => x && x !== name && !NON_READABLE.test(x)))].join(' · ') // 残留看不懂的(没匹配到英文)宁可不显示
-    const en = /^[\x00-\x7f]+$/.test(e.name || '') ? (e.name || '').toUpperCase() : ''
-    const key = `${(+lat).toFixed(3)},${(+lng).toFixed(3)}`
-    if (seen.has(key)) return
-    seen.add(key)
-    out.push({
-      name,
-      lat: +(+lat).toFixed(4),
-      lng: +(+lng).toFixed(4),
-      domestic,
-      ctx,
-      country,
-      cont: continentOf(cc),
-      en,
-      _rank: placeRank(d, q),
-      _i: out.length,
+    ; (jd.features || []).forEach((f) => {
+      if (!f.geometry || f.geometry.type !== 'Point') return
+      const [lng, lat] = f.geometry.coordinates
+      const d = f.properties || {}
+      const e = (d.osm_id != null && enById.get(`${d.osm_type}/${d.osm_id}`)) || {}
+      const cc = String(d.countrycode || e.countrycode || '').toUpperCase()
+      const domestic = ['CN', 'HK', 'MO', 'TW'].includes(cc) || d.country === '中国' || d.country === 'China'
+      const name = preferReadable(d.name || d.city || d.county || d.district, e.name || e.city || e.county) || q
+      const region = preferReadable(d.state || d.city, e.state || e.city)
+      const country = preferReadable(d.country, e.country)
+      const parts = domestic
+        ? [region, preferReadable(d.county || d.city || d.district, e.county || e.city)]
+        : [region, country]
+      const ctx = [...new Set(parts.filter((x) => x && x !== name && !NON_READABLE.test(x)))].join(' · ') // 残留看不懂的(没匹配到英文)宁可不显示
+      const en = /^[\x00-\x7f]+$/.test(e.name || '') ? (e.name || '').toUpperCase() : ''
+      const key = `${(+lat).toFixed(3)},${(+lng).toFixed(3)}`
+      if (seen.has(key)) return
+      seen.add(key)
+      out.push({
+        name,
+        lat: +(+lat).toFixed(4),
+        lng: +(+lng).toFixed(4),
+        domestic,
+        ctx,
+        country,
+        cont: continentOf(cc),
+        en,
+        _rank: placeRank(d, q),
+        _i: out.length,
+      })
     })
-  })
   out.sort((a, b) => b._rank - a._rank || a._i - b._i) // 行政地名优先；同级保留 Photon 原始相关度顺序
   return out.slice(0, 8)
 }
@@ -1698,14 +1698,14 @@ function setupGeoInput(input) {
   const render = () => {
     box.innerHTML = items.length
       ? items
-          .map(
-            (c, i) =>
-              `<li data-i="${i}"${i === active ? ' class="active"' : ''}>` +
-              `<span class="gs-name">${escapeHtml(c.name)}</span>` +
-              (c.ctx ? `<span class="gs-ctx">${escapeHtml(c.ctx)}</span>` : '') +
-              `<span class="gs-tag ${c.domestic ? 'cn' : 'c-' + c.cont.key}">${c.domestic ? '中国' : escapeHtml(c.country) || c.cont.zh}</span></li>`,
-          )
-          .join('')
+        .map(
+          (c, i) =>
+            `<li data-i="${i}"${i === active ? ' class="active"' : ''}>` +
+            `<span class="gs-name">${escapeHtml(c.name)}</span>` +
+            (c.ctx ? `<span class="gs-ctx">${escapeHtml(c.ctx)}</span>` : '') +
+            `<span class="gs-tag ${c.domestic ? 'cn' : 'c-' + c.cont.key}">${c.domestic ? '中国' : escapeHtml(c.country) || c.cont.zh}</span></li>`,
+        )
+        .join('')
       : `<li class="gs-empty">没找到「${escapeHtml(lastQ)}」——换个写法或更具体的名字（可加省份，如「恩施 茅田」）</li>`
     box.hidden = false
   }
@@ -2032,28 +2032,28 @@ function dimBaseLabels() {
       if (en && en !== k) add(en)
     }),
   )
-  ;(glMap.getStyle().layers || []).forEach((l) => {
-    if (l.type !== 'symbol' || l.id === 'routes-line' || l.id === 'routes-flow') return
-    try {
-      glMap.setPaintProperty(l.id, 'text-opacity', 0.36) // 底图地名整体再压淡，减少视觉干扰，让去过的城市跳出来
-      glMap.setPaintProperty(l.id, 'icon-opacity', 0.4)
-      if (l['source-layer'] === 'place' && visited.length) {
-        const inSet = (field) => ['in', ['coalesce', ['get', field], ''], ['literal', visited]]
-        // 中英文、多字段全比对：国内靠中文(name:nonlatin/name/name:zh)、国外靠英文(name:latin/name:en/name_int)命中隐藏，
-        // 覆盖 openfreemap 与 CARTO 等不同底图的字段差异，杜绝重复。
-        const excl = ['all'].concat(
-          ['name:nonlatin', 'name', 'name:latin', 'name:en', 'name:zh', 'name_int'].map((f) => [
-            '!',
-            inSet(f),
-          ]),
-        )
-        const cur = glMap.getFilter(l.id)
-        glMap.setFilter(l.id, cur ? ['all', cur, excl] : excl)
+    ; (glMap.getStyle().layers || []).forEach((l) => {
+      if (l.type !== 'symbol' || l.id === 'routes-line' || l.id === 'routes-flow') return
+      try {
+        glMap.setPaintProperty(l.id, 'text-opacity', 0.36) // 底图地名整体再压淡，减少视觉干扰，让去过的城市跳出来
+        glMap.setPaintProperty(l.id, 'icon-opacity', 0.4)
+        if (l['source-layer'] === 'place' && visited.length) {
+          const inSet = (field) => ['in', ['coalesce', ['get', field], ''], ['literal', visited]]
+          // 中英文、多字段全比对：国内靠中文(name:nonlatin/name/name:zh)、国外靠英文(name:latin/name:en/name_int)命中隐藏，
+          // 覆盖 openfreemap 与 CARTO 等不同底图的字段差异，杜绝重复。
+          const excl = ['all'].concat(
+            ['name:nonlatin', 'name', 'name:latin', 'name:en', 'name:zh', 'name_int'].map((f) => [
+              '!',
+              inSet(f),
+            ]),
+          )
+          const cur = glMap.getFilter(l.id)
+          glMap.setFilter(l.id, cur ? ['all', cur, excl] : excl)
+        }
+      } catch (e) {
+        /* 该层无此属性，忽略 */
       }
-    } catch (e) {
-      /* 该层无此属性，忽略 */
-    }
-  })
+    })
 }
 
 // 选中段的"活"：轻柔呼吸（脉动透明度），不改粗细/虚线密度，保持与其他线一致。
@@ -2212,21 +2212,21 @@ function buildLocalStyle(skin) {
   const night = skin === 'night'
   const C = night
     ? {
-        bg: '#0a1422',
-        land: '#0e2034',
-        border: 'rgba(214,230,251,.16)',
-        prov: 'rgba(214,230,251,.09)',
-        lake: '#11314c',
-        river: '#143a55',
-      }
+      bg: '#0a1422',
+      land: '#0e2034',
+      border: 'rgba(214,230,251,.16)',
+      prov: 'rgba(214,230,251,.09)',
+      lake: '#11314c',
+      river: '#143a55',
+    }
     : {
-        bg: '#e7e1d4',
-        land: '#fcfbf6',
-        border: 'rgba(60,55,48,.22)',
-        prov: 'rgba(60,55,48,.12)',
-        lake: '#c3d2d7',
-        river: '#bccdd2',
-      }
+      bg: '#e7e1d4',
+      land: '#fcfbf6',
+      border: 'rgba(60,55,48,.22)',
+      prov: 'rgba(60,55,48,.12)',
+      lake: '#c3d2d7',
+      river: '#bccdd2',
+    }
   const w = window.WATER_CHINA_DATA || { rivers: [], lakes: [] }
   const fc = (features) => ({ type: 'FeatureCollection', features })
   const rivers = fc(
@@ -2324,7 +2324,7 @@ function updateOfflineHint() {
     el.id = 'offlineHint'
     el.className = 'offline-hint'
     el.textContent = '离线 · 简版底图（行程数据照常）'
-    ;(document.querySelector('.map-surface') || document.body).appendChild(el)
+      ; (document.querySelector('.map-surface') || document.body).appendChild(el)
   }
   el.style.display = offlineMode ? '' : 'none'
 }
@@ -2456,37 +2456,37 @@ function applyMapTheme(c) {
         : /secondary|tertiary/.test(id)
           ? c.road_secondary || c.road_tertiary || c.road_default
           : c.road_residential || c.road_default
-  ;(glMap.getStyle().layers || []).forEach((l) => {
-    const id = (l.id || '').toLowerCase(),
-      sl = (l['source-layer'] || '').toLowerCase(),
-      key = sl + ' ' + id
-    try {
-      if (l.type === 'background') glMap.setPaintProperty(l.id, 'background-color', BG)
-      else if (l.type === 'fill') {
-        if (key.includes('water')) glMap.setPaintProperty(l.id, 'fill-color', WATER)
-        else if (id.includes('building')) glMap.setPaintProperty(l.id, 'fill-color', PARKS)
-        else if (
-          /(landcover|landuse|park|wood|grass|forest|wetland|sand|cemetery|pitch|golf|farmland|land)/.test(
-            key,
+    ; (glMap.getStyle().layers || []).forEach((l) => {
+      const id = (l.id || '').toLowerCase(),
+        sl = (l['source-layer'] || '').toLowerCase(),
+        key = sl + ' ' + id
+      try {
+        if (l.type === 'background') glMap.setPaintProperty(l.id, 'background-color', BG)
+        else if (l.type === 'fill') {
+          if (key.includes('water')) glMap.setPaintProperty(l.id, 'fill-color', WATER)
+          else if (id.includes('building')) glMap.setPaintProperty(l.id, 'fill-color', PARKS)
+          else if (
+            /(landcover|landuse|park|wood|grass|forest|wetland|sand|cemetery|pitch|golf|farmland|land)/.test(
+              key,
+            )
           )
-        )
-          glMap.setPaintProperty(l.id, 'fill-color', PARKS)
-        else glMap.setPaintProperty(l.id, 'fill-color', BG)
-      } else if (l.type === 'line') {
-        if (/(water|river|canal|waterway)/.test(key)) glMap.setPaintProperty(l.id, 'line-color', WATER)
-        else if (/(admin|boundary)/.test(id))
-          glMap.setPaintProperty(l.id, 'line-color', c.road_tertiary || c.text)
-        else if (/(road|street|highway|bridge|tunnel|transit|rail|motorway|path|track|aeroway)/.test(id))
-          glMap.setPaintProperty(l.id, 'line-color', roadColor(id))
-      } else if (l.type === 'symbol') {
-        // 地名文字也跟主题走（浅色主题靠它才"看得出"是哪套色），晕色用(抬亮后的)底色保证可读
-        if (c.text) glMap.setPaintProperty(l.id, 'text-color', c.text)
-        glMap.setPaintProperty(l.id, 'text-halo-color', BG)
+            glMap.setPaintProperty(l.id, 'fill-color', PARKS)
+          else glMap.setPaintProperty(l.id, 'fill-color', BG)
+        } else if (l.type === 'line') {
+          if (/(water|river|canal|waterway)/.test(key)) glMap.setPaintProperty(l.id, 'line-color', WATER)
+          else if (/(admin|boundary)/.test(id))
+            glMap.setPaintProperty(l.id, 'line-color', c.road_tertiary || c.text)
+          else if (/(road|street|highway|bridge|tunnel|transit|rail|motorway|path|track|aeroway)/.test(id))
+            glMap.setPaintProperty(l.id, 'line-color', roadColor(id))
+        } else if (l.type === 'symbol') {
+          // 地名文字也跟主题走（浅色主题靠它才"看得出"是哪套色），晕色用(抬亮后的)底色保证可读
+          if (c.text) glMap.setPaintProperty(l.id, 'text-color', c.text)
+          glMap.setPaintProperty(l.id, 'text-halo-color', BG)
+        }
+      } catch (e) {
+        /* 该层不支持该属性，跳过 */
       }
-    } catch (e) {
-      /* 该层不支持该属性，跳过 */
-    }
-  })
+    })
 }
 
 // MapLibre 版渲染：行程路线写进 GeoJSON 线层，城市做成 DOM 标记。
@@ -2762,10 +2762,10 @@ function posterCountryCount() {
   const set = new Set()
   filteredRecords().forEach((r) => {
     if (!r.countsAsVisited) return
-    ;[r.origin, r.destination].filter(Boolean).forEach((c) => {
-      const m = CITY_META[stripShi(c)]
-      set.add(m && m.country ? m.country : '中国')
-    })
+      ;[r.origin, r.destination].filter(Boolean).forEach((c) => {
+        const m = CITY_META[stripShi(c)]
+        set.add(m && m.country ? m.country : '中国')
+      })
   })
   return set.size
 }
@@ -3010,22 +3010,22 @@ function renderTravelPoster(canvas, opts) {
     ctx.stroke()
     const water = window.WATER_CHINA_DATA || { rivers: [], lakes: [] }
     ctx.beginPath()
-    ;(water.lakes || []).forEach((ring) => {
-      ring.forEach((pt, i) => {
-        const [x, y] = project(pt[0], pt[1])
-        i ? ctx.lineTo(x, y) : ctx.moveTo(x, y)
+      ; (water.lakes || []).forEach((ring) => {
+        ring.forEach((pt, i) => {
+          const [x, y] = project(pt[0], pt[1])
+          i ? ctx.lineTo(x, y) : ctx.moveTo(x, y)
+        })
+        ctx.closePath()
       })
-      ctx.closePath()
-    })
     ctx.fillStyle = WATER
     ctx.fill()
     ctx.beginPath()
-    ;(water.rivers || []).forEach((line) =>
-      line.forEach((pt, i) => {
-        const [x, y] = project(pt[0], pt[1])
-        i ? ctx.lineTo(x, y) : ctx.moveTo(x, y)
-      }),
-    )
+      ; (water.rivers || []).forEach((line) =>
+        line.forEach((pt, i) => {
+          const [x, y] = project(pt[0], pt[1])
+          i ? ctx.lineTo(x, y) : ctx.moveTo(x, y)
+        }),
+      )
     ctx.lineWidth = 1
     ctx.strokeStyle = WATER
     ctx.stroke()
@@ -3060,10 +3060,10 @@ function renderTravelPoster(canvas, opts) {
   const usage = new Map()
   filteredRecords().forEach((r) => {
     if (!r.countsAsVisited) return
-    ;[r.origin, r.destination].filter(Boolean).forEach((c) => {
-      const k = stripShi(c)
-      usage.set(k, (usage.get(k) || 0) + 1)
-    })
+      ;[r.origin, r.destination].filter(Boolean).forEach((c) => {
+        const k = stripShi(c)
+        usage.set(k, (usage.get(k) || 0) + 1)
+      })
   })
   const items = []
   usage.forEach((count, city) => {
@@ -3203,10 +3203,10 @@ function toggleImmersive() {
   }
   try {
     if (on && !document.fullscreenElement && document.documentElement.requestFullscreen)
-      document.documentElement.requestFullscreen().catch(() => {})
+      document.documentElement.requestFullscreen().catch(() => { })
     else if (!on && document.fullscreenElement && document.exitFullscreen)
-      document.exitFullscreen().catch(() => {})
-  } catch (e) {}
+      document.exitFullscreen().catch(() => { })
+  } catch (e) { }
   if (glMap) setTimeout(() => glMap.resize(), 80)
 }
 document.addEventListener('fullscreenchange', () => {
@@ -3228,7 +3228,7 @@ let metricVis = (() => {
   try {
     const s = JSON.parse(localStorage.getItem('journeyatlas-metric-vis'))
     if (s && typeof s === 'object') return Object.assign(def, s)
-  } catch (e) {}
+  } catch (e) { }
   return def
 })()
 function applyMetricVis() {
@@ -3859,30 +3859,30 @@ function classifyOsm(json) {
     parks = [],
     poi = [],
     coastlines = []
-  ;(json.elements || []).forEach((el) => {
-    const t = el.tags || {}
-    if (el.type === 'node') {
-      if (t.amenity) poi.push([el.lon, el.lat])
-      return
-    }
-    const geom = el.geometry
-    if (!geom || geom.length < 2) return
-    const pts = geom.map((g) => [g.lon, g.lat])
-    if (t.natural === 'coastline') {
-      coastlines.push(pts)
-      return
-    }
-    if (t.highway) {
-      const spec = roadSpec(t.highway)
-      if (spec) roads.push({ cls: spec.cls, w: spec.w, geom: pts })
-    } else if (t.natural === 'water' || t.waterway === 'riverbank' || t.water) {
-      waterFill.push(pts)
-    } else if (t.waterway) {
-      waterLine.push(pts)
-    } else if (t.leisure || t.landuse) {
-      parks.push(pts)
-    }
-  })
+    ; (json.elements || []).forEach((el) => {
+      const t = el.tags || {}
+      if (el.type === 'node') {
+        if (t.amenity) poi.push([el.lon, el.lat])
+        return
+      }
+      const geom = el.geometry
+      if (!geom || geom.length < 2) return
+      const pts = geom.map((g) => [g.lon, g.lat])
+      if (t.natural === 'coastline') {
+        coastlines.push(pts)
+        return
+      }
+      if (t.highway) {
+        const spec = roadSpec(t.highway)
+        if (spec) roads.push({ cls: spec.cls, w: spec.w, geom: pts })
+      } else if (t.natural === 'water' || t.waterway === 'riverbank' || t.water) {
+        waterFill.push(pts)
+      } else if (t.waterway) {
+        waterLine.push(pts)
+      } else if (t.leisure || t.landuse) {
+        parks.push(pts)
+      }
+    })
   // 主干道画在上层：default→residential→tertiary→secondary→primary→motorway
   const order = [
     'road_default',
@@ -4361,7 +4361,7 @@ function flashToast(msg, ms = 1800) {
 // 跳转前先一闪而过提示要去的是另一个项目；并把聚焦城市英文名复制到剪贴板，方便到那边粘贴。
 function openStreetPosterSite(city) {
   const latin = city ? titleCase(cityLatin(stripShi(city))) : ''
-  if (latin && navigator.clipboard) navigator.clipboard.writeText(latin).catch(() => {})
+  if (latin && navigator.clipboard) navigator.clipboard.writeText(latin).catch(() => { })
   flashToast('即将前往另一个开源项目 <b>maptoposter</b> 生成街道海报 ↗', 1700)
   // 延迟一点点再打开（仍在用户手势的有效激活窗口内），好让提示被看见。
   setTimeout(() => window.open('https://maptoposter.0v0.one/', '_blank', 'noopener'), 820)
@@ -4544,23 +4544,23 @@ function timelineRecords() {
 // 能看到去与回。若某段回程没出现，是该回程尚未录入数据(不臆造)。
 function buildPlaySegments(list) {
   const segs = []
-  ;[...list]
-    .filter((r) => r.countsAsVisited && r.origin && r.destination && r.origin !== r.destination)
-    .sort((p, q) => String(p.startDate || '').localeCompare(String(q.startDate || '')))
-    .forEach((r) => {
-      const a = cityLngLat(r.origin),
-        b = cityLngLat(r.destination)
-      if (!a || !b) return
-      segs.push({
-        key: r.id,
-        kind: r.kind,
-        from: r.origin,
-        to: r.destination,
-        fromLL: a,
-        toLL: b,
-        repId: r.id,
+    ;[...list]
+      .filter((r) => r.countsAsVisited && r.origin && r.destination && r.origin !== r.destination)
+      .sort((p, q) => String(p.startDate || '').localeCompare(String(q.startDate || '')))
+      .forEach((r) => {
+        const a = cityLngLat(r.origin),
+          b = cityLngLat(r.destination)
+        if (!a || !b) return
+        segs.push({
+          key: r.id,
+          kind: r.kind,
+          from: r.origin,
+          to: r.destination,
+          fromLL: a,
+          toLL: b,
+          repId: r.id,
+        })
       })
-    })
   segs.forEach((s) => {
     s.coords = segPath(s.kind, s.from, s.to, s.fromLL, s.toLL)
   })

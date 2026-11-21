@@ -60,7 +60,8 @@ function isActive(to: string): boolean {
 
 @media (max-width: 640px) {
   .nav {
-    width: 100%;
+    flex: 1 1 auto;
+    min-width: 0;
   }
 
   .nav-link {

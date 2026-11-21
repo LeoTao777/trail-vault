@@ -63,6 +63,9 @@ export function parseTicketText(text: string, traveler = OWNER_NAME): TravelReco
     .join(' ')
 
   return {
+    // 票据解析产物只是「表单草稿」：id 在录入页提交时由表单生成（旧版同语义），
+    // 这里补空串是为了满足 TravelRecord 的形状，不会被写进数据。
+    id: '',
     startDate: dateInfo.value,
     endDate: dateInfo.value,
     kind,

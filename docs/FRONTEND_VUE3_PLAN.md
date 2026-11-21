@@ -1,6 +1,6 @@
 # 前端 Vue 3 重构计划
 
-> 状态：**P0、P1 已完成**，下一步 P2（骨架与状态）；P2–P7 待执行
+> 状态：**P0、P1、P2 已完成**，下一步 P3（主页：地图 + 时间线）；P3–P7 待执行
 > 范围：`frontend/`（纯静态 Vanilla JS 单页）→ Vue 3 + TypeScript + Vite 多路由应用
 > 关联：`backend/server/route.go`（静态托管 / SPA fallback）、`backend/main.go`（frontendDir）
 
@@ -106,8 +106,11 @@ frontend/                       # Vite 项目根（原 index.html/app.js/app.css
    │   ├─ csv.ts                # toCsv / parseCsv
    │   ├─ ticket.ts             # parseTicketText / extractTransportNo / inferKind ...
    │   ├─ theme.ts              # POSTER_THEMES / POSTER_PALETTES / applySkin
+   │   ├─ query.ts              # P2：URL query ↔ Filters（parse / build / same）
+   │   ├─ prefs.ts              # P2：偏好 localStorage 解析 + 标题推导
    │   └─ poster/travelPoster.ts# 行旅海报 Canvas 绘制
    ├─ api/client.ts             # fetchRecords / fetchUsers / createRecord + 三级回退 + 错误归一
+   ├─ composables/filterQuery.ts# P2：筛选状态 ↔ URL query 双向同步（AppShell 挂载）
    ├─ stores/{records,prefs,toast}.ts
    ├─ views/{HomeView,ArchiveView,RecordView}.vue
    └─ components/
@@ -189,7 +192,7 @@ frontend:
 - [x] 验收项（见 `frontend/README.md` 的「构建与联调 SPA 兜底」）：`/`、`/archive`、`/record` 直接刷新可命中；
   `/api/nope` 返回 JSON 404；缺失的 `/assets/*.js` 返回 404 而非 HTML
 
-> 下一步：P2 —— `FilterBar` + `useRecordsStore` / `usePrefsStore`，筛选状态与 URL query 双向同步。
+> P2 已完成；当前下一步：P3 —— 主页地图 + 时间线。
 
 ### P1 · 纯逻辑搬家（1.5d，风险最高收益最大）✅ 已完成
 
@@ -206,12 +209,12 @@ frontend:
 - [x] 验收：对同一份后端数据，新 domain 输出与旧版页面显示的数字逐项一致
       （做法见 §11：把旧版算法用 UTC 日期枚举**独立重写**成参考实现，对真实演示数据集做差分比对）
 
-### P2 · 骨架与状态（1d）
+### P2 · 骨架与状态（1d）✅ 已完成
 
-- [ ] `FilterBar` + `HelpDialog`（`AppShell` / `AppNav` / `ToastHost` 已在 P0 落地）
-- [ ] `useRecordsStore`：`ensureLoaded()` / `refresh()` / `filteredRecords` / `selectedId`；`usePrefsStore`：皮肤、指标可见性、自定义标题（localStorage key 沿用）
-- [ ] 筛选状态 ↔ URL query 双向同步（`/` 与 `/archive` 共享）
-- [ ] 验收：三路由切换、深链刷新、浏览器前进后退、筛选跨页一致
+- [x] `FilterBar` + `HelpDialog`（`AppShell` / `AppNav` / `ToastHost` 已在 P0 落地）
+- [x] `useRecordsStore`：`ensureLoaded()` / `refresh()` / `filteredRecords` / `selectedId`；`usePrefsStore`：皮肤、指标可见性、自定义标题（localStorage key 沿用）
+- [x] 筛选状态 ↔ URL query 双向同步（`/` 与 `/archive` 共享）
+- [x] 验收：三路由切换、深链刷新、浏览器前进后退、筛选跨页一致
 
 ### P3 · 主页：地图 + 时间线（2d）
 
@@ -380,6 +383,27 @@ api/client.ts ──records──▶ useRecordsStore
 | `frontend/src/{domain,api}/**.spec.ts` | 10 个测试文件：normalize / filters / chain / stats / geo / format / csv / ticket / api client / legacy-parity（真实数据集差分） |
 | `frontend/src/test/records.ts` | 测试用记录工厂（只写与用例相关的字段，其余交给 `normalize` 默认值） |
 
+### P2 落地清单
+
+| 文件 | 说明 |
+| --- | --- |
+| `frontend/src/domain/query.ts` | `parseFilters` / `sanitizeFilters` / `buildFilterQuery` / `hasFilterQuery` / `parseFocusId` / `sameFilters` / `sameQuery`：URL query ↔ `Filters` 的纯函数，零 Vue 依赖 |
+| `frontend/src/domain/query.spec.ts` | 深链脏值收敛、重复参数取首值、默认口径不写参数、focus 限长、`sameQuery` 防回环 |
+| `frontend/src/domain/prefs.ts` | `parseFlag` / `parseSkin` / `parseMetricVisibility` / `parseSiteTitle` / `currentSiteTitle` / `documentTitle` / `titleLines`：坏缓存一律静默回默认 |
+| `frontend/src/domain/prefs.spec.ts` | 旧版 `1/0` 标志、皮肤 key、指标可见性缺键=可见、自定义标题推导标签页标题 |
+| `frontend/src/stores/records.ts` | `useRecordsStore`：`ensureLoaded()` / `refresh()` / `ensureUsers()`、`filteredRecords`（含 pending 缺口）/ `ledgerRecords`（不含）/ `metrics` / `options` / `scopeLabel` / `selectedRecord`、`filters` / `selectedId` / `focusId`、`setFilters()` / `resetFilters()` / `select()` / `setFocusId()` / `clearFocus()`，以及给 P5 预留的 `clearAll()` / `reload()` |
+| `frontend/src/stores/prefs.ts` | `usePrefsStore`：皮肤（`journeyatlas_map_skin`）、指标可见性（`journeyatlas-metric-vis`）、展示模式（`yw-show-mode`）、标题显隐（`yw-title-hidden`）、自定义标题（`yw-site-title`）；`applyDocument()` 统一写 `data-skin` / body class / `document.title` |
+| `frontend/src/stores/records.spec.ts` | Pinia store 的筛选叠加、选中态重落脚、脏值收敛、focus 深链、pending 缺口注入 |
+| `frontend/src/composables/filterQuery.ts` | `useFilterQuerySync()`：`/` 与 `/archive` 的 query ↔ store 双向同步；URL 带筛选键时 URL 为准（深链 / 前进后退），否则 store 为准写回（跨页一致）；默认值不写 URL、`focus` 只在主页写、`router.replace` 不污染历史栈 |
+| `frontend/src/layout/FilterBar.vue` | 四个共享下拉（年份 / 旅客 / 类型 / 证据）+ 重置 + 主页「刷新资料」+ 口径/条数/来源状态行；选项来自 `filterOptions()`，深链里选项外的值补「当前值」占位 |
+| `frontend/src/layout/AppShell.vue` | 挂 `FilterBar`（仅 `/`、`/archive`）、`HelpDialog`、使用说明入口、`useFilterQuerySync()`、`onMounted` 首屏加载；报头改用 `usePrefsStore` 的自定义标题 |
+| `frontend/src/components/common/HelpDialog.vue` | 旧 `HELP_HTML` 模板化（**无 `v-html`**），Teleport + Esc / 遮罩 / 关闭按钮 + Tab 焦点陷阱 + 焦点归还 |
+| `frontend/src/styles/layout.css` | 三页共享的 `.field` / `.select` / `.btn` / `.filter-*` / `.state-*` 原语（P0 计划里的 `styles/layout.css` 本阶段补齐） |
+| `frontend/src/router/index.ts` | `afterEach` 改为经 `usePrefsStore().setPageTitle()` 写标签页；自定义标题优先于页名 |
+| `frontend/src/config.ts` | 新增 `DOC_TITLE_SUFFIX`（原 router 里写死的 `TrailVault` 上移为配置） |
+| `frontend/src/main.ts` | 引入 `styles/layout.css` |
+| `frontend/src/views/*.vue` | 三页占位视图接入真实 store 状态（资料来源 / 口径 / 条数 / 选中 / 5 指标 / Hero 数字预览），作为 P2 验收位；P3/P4/P5 换成正式版式 |
+
 ### 偏差
 
 1. **旧的 `app.js` / `app.css` / `data/` 没有物理移动到 `frontend-legacy/`**：本次执行环境没有可用 shell，
@@ -414,4 +438,24 @@ api/client.ts ──records──▶ useRecordsStore
 8. **`POSTER_THEMES` 未找到独立数据文件**：旧版是 `data/*.js` 挂在 `window.POSTER_THEMES`。
    `domain/theme.ts` 已提供 `registerPosterThemes()`，并在模块加载时自动并入 `globalThis.POSTER_THEMES`；
    P6 把 20 套主题搬成 `src/data/posterThemes.ts` 后调用一次即可（届时色板套数才会从 3 变成 23）。
-9. **本阶段没有可用 shell**：`npm run typecheck / lint / test` 需要在有 Node 的环境里跑一次确认（见 `frontend/README.md` 的脚本表）。
+9. **P1 阶段没有可用 shell**：`npm run typecheck / lint / test` 需要在有 Node 的环境里跑一次确认（见 `frontend/README.md` 的脚本表）。
+10. **P2 同样没有可用 shell**（Windows 环境未安装 Git Bash / 找不到 `bash.exe`）：所有文件通过读写工具落地，
+    `npm run typecheck / lint / test / build` 仍需在 CI 或有 Node 的机器上跑一次。新增的三个测试文件
+    （`domain/query.spec.ts`、`domain/prefs.spec.ts`、`stores/records.spec.ts`）是纯逻辑 / Pinia 用例，
+    不依赖 DOM 与网络，可在 `vitest run` 下直接验证。
+11. **§4 目录结构补了三处（P2 新增）**：`src/domain/query.ts`、`src/domain/prefs.ts`（都是零 Vue 依赖的纯解析层）、
+    `src/composables/filterQuery.ts`（路由同步 composable）、`src/styles/layout.css`（P0 计划里就列了、当时未建）。
+    原因是把 URL 编解码与偏好解析从 store 里抽出来才能单测，也避免 Pinia 依赖 Vue Router 类型。
+12. **筛选同步的「谁说了算」**：URL 显式带 `year/traveler/kind/confidence` 任一键时 URL 为准（深链、浏览器前进后退）；
+    一个键都没有时 store 为准并 `router.replace` 写回（保证从 `/record` 回主页/档案页时筛选不丢、跨页一致）。
+    默认口径不写参数，所以 `/` 与 `/archive` 的干净链接不会拖一串 `?year=all…`。
+    `focus` 只在 `/` 写；P4 从档案页跳回主页时链接形如 `/?year=2024&focus=<id>`。
+13. **`/record` 不显示 FilterBar**（§2 规定数据操作归录入页，筛选栏只属主页/档案页），但 store 里的筛选状态不会因
+    切到录入页而清空。`clearAll()` / `reload()` 已在 store 备好，P5 的 `DataTools` 直接调用；
+    「刷新」按钮按 §0 决策只放在主页。
+14. **P2 后第一次真正跑 `vue-tsc` 暴露了两处 P1 遗留类型错**（P1 阶段无 shell，未做过类型检查），已修：
+    - `src/domain/ticket.ts`：`parseTicketText()` 声明返回 `TravelRecord` 但草稿对象缺 `id` → 补 `id: ''`
+      （票据解析只是表单草稿，id 在录入提交时生成，与旧版语义一致）；
+    - `src/test/records.ts`：相对导入写成 `./normalize` / `./types`，实际文件在 `src/domain/` →
+      改为 `@/domain/normalize` / `@/domain/types`。修好后 `records()` 才真正返回 `TravelRecord[]`，
+      P1 的所有 spec 重新接受类型检查。
