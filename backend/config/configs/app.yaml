@@ -15,3 +15,13 @@ log:
 
 database:
   path: data/trail-vault.db
+
+# 前端相关
+# devdir  : 开发期源码目录；distdir : `npm run build` 产物（dev 无 devproxy 时产物存在则优先托管）
+# devproxy: 开发期把页面请求反代给 Vite dev server，让 8080 与 5173 看到同一个应用
+#           起好 `npm run dev` 后直接访问 8080 即可（生产模式忽略此项）；
+#           只想在 8080 看构建产物时，把 devproxy 留空即可
+frontend:
+  devdir: ../frontend
+  distdir: ../frontend/dist
+  devproxy: http://127.0.0.1:5173

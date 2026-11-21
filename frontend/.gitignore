@@ -1,7 +1,6 @@
-.DS_Store
-__pycache__/
-*.pyc
 node_modules/
-*.log
-.vscode/
-.idea/
+dist/
+*.local
+.DS_Store
+coverage/
+.vite/

@@ -35,8 +35,12 @@ func main() {
 	}
 	log.Info("SnowFlake init successed")
 
-	//todo:部署的时候修改为./dist
-	srv := server.New(&cfg.Server, "../frontend", db, log)
+	// 前端静态目录与开发期反代由配置决定：
+	//   dev 模式 + frontend.devproxy → 非 /api 请求反代给 Vite dev server（热更新）；
+	//   dev 模式（无 devproxy）→ 优先托管已构建的 ../frontend/dist，否则回落源码目录；
+	//   release 模式 → 只托管 ../frontend/dist。
+	// 见 config.FrontendConfig / config.StaticDir() / config.DevProxy()。
+	srv := server.New(cfg, db, log)
 
 	if err := srv.Run(); err != nil {
 		log.Error("Server init failed", zap.String("error_info", err.Error()))

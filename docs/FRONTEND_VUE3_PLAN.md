@@ -1,6 +1,6 @@
 # 前端 Vue 3 重构计划
 
-> 状态：计划已确认，待执行（P0）
+> 状态：**P0 已完成**，下一步 P1（domain 纯逻辑搬家 + 数字快照）；P1–P7 待执行
 > 范围：`frontend/`（纯静态 Vanilla JS 单页）→ Vue 3 + TypeScript + Vite 多路由应用
 > 关联：`backend/server/route.go`（静态托管 / SPA fallback）、`backend/main.go`（frontendDir）
 
@@ -121,37 +121,75 @@ frontend/                       # Vite 项目根（原 index.html/app.js/app.css
 
 ## 5. 后端改动
 
-### 5.1 SPA fallback（必须）
+### 5.0 配置形态（已落地）
 
-`backend/server/route.go` 的 `NoRoute` 改为：
+```yaml
+frontend:
+  devdir: ../frontend        # 开发期源码目录（无 devproxy 时的兜底静态托管）
+  distdir: ../frontend/dist  # npm run build 产物
+  devproxy: http://127.0.0.1:5173   # dev 模式把非 /api 请求反代给 Vite dev server（release 忽略）
+```
 
-1. 路径前缀 `/api/` 或 `/health` → `404 {"error":"not found"}`（JSON，别把 index.html 当接口响应）；
-2. 静态文件存在 → 正常发送（`app.css`、`/assets/*`、`/data/*`）；
-3. 其余（`/`、`/archive`、`/record`、`/?focus=x`）→ 回 `index.html`。
+请求落点优先级（`server/route.go: registerStatic`）：
 
-否则 `/archive`、`/record` 直接刷新或分享链接必 404。
+1. dev + `devproxy` 非空 → 整体反代给 Vite（含 HMR websocket 升级），8080 与 5173 同一个应用；
+2. 真实文件（`/assets/*`、`/data/*.json`）→ 直发 + 缓存头；
+3. `/api`、`/health` 未命中 → JSON 404；
+4. 带扩展名但缺失 → 404；
+5. 其余 → `index.html`（SPA 兜底）。
 
-### 5.2 托管目录与缓存
+`config.Config.StaticDir()` 只在**非 devproxy 或 release** 时决定静态目录：
 
-- `main.go`：`frontendDir` 由配置决定，dev 指向 Vite dev server 反代场景不使用；release 指向 `../frontend/dist`。清掉 `//todo:部署的时候修改为./dist`。
-- 缓存头：`index.html` → `no-store`；`/assets/*`（Vite 带 hash）→ `public, max-age=31536000, immutable`；`/data/*.json` → 中等缓存（可协商 ETag）。
+- `mode: release` → 只认 `distdir`；
+- `mode: dev` → `distdir/index.html` 存在就托管产物，否则回落 `devdir`（并触发源码目录白屏保护）。
+
+`config.Config.DevProxy()` 在非 dev 模式恒返回空，生产绝不把请求转给外部进程。
+
+### 5.1 SPA fallback（已实现）
+
+`backend/server/route.go` 的 `NoRoute` 按下面顺序判定：
+
+1. `/api`、`/api/*`、`/health` 未命中 → `404 {"error":"not found"}`（JSON，别把 index.html 当接口响应）；
+2. 非 GET/HEAD → 405；
+3. 命中真实文件（`/assets/*`、`/data/*.json`、字体…）→ 直接发送，按类型给缓存头（目录穿越已用 `path.Clean` + 前缀校验拦住）；
+4. **带扩展名但文件不存在** → 404。漏了这条会把 HTML 喂给 `<script>`/`<link>`，
+   报出“Uncaught SyntaxError: Unexpected token '<'”这类极难定位的错误；
+5. 其余（`/`、`/archive`、`/record`、`/?focus=x`）→ 回 `index.html`，交给前端路由。
+
+否则 `/archive`、`/record` 直接刷新或分享链接必 404。启动时若 `index.html` 不存在会 `Warn` 提示去 `npm run build`。
+
+### 5.2 托管目录与缓存（已实现）
+
+- `main.go`：不再写死 `../frontend`，改为 `server.New(&cfg.Server, cfg.StaticDir(), …)`，`//todo` 已清掉。
+- 缓存头（`cacheControl()`）：
+  - `mode: dev` → 所有静态资源 `no-store`（前端改完普通刷新即生效）；
+  - `mode: release` → `/assets/*`（带内容 hash）`public, max-age=31536000, immutable`；
+    入口 `index.html`（含 `/`、`/archive` 回退）`no-cache`；其余 `/data/*.json` 等 `public, max-age=3600`。
 - 可选（后续）：`//go:embed dist` 单二进制部署；Gin gzip 中间件（GeoJSON 体积可观）。
 
-### 5.3 dev 联调
+### 5.3 dev 联调（已实现）
 
-`vite.config.ts` 的 `server.proxy['/api'] → http://localhost:<gin-port>`，前端 `npm run dev` + 后端 `go run .` 并行；Gin 的开发态 `no-store` 只作用于 html。
+`vite.config.ts` 的 `server.proxy` 把 `/api` 与 `/health` 反代到 `VITE_API_PROXY`（默认 `http://127.0.0.1:8080`），
+前端 `npm run dev` + 后端 `go run .` 并行；页面代码里统一 `fetch('/api/records')`，不写死 host。
 
 ## 6. 分阶段实施计划
 
 > 估时按单人计；每阶段结束都有可验收产物。
 
-### P0 · 脚手架（0.5d）
+### P0 · 脚手架（0.5d）✅ 已完成
 
-- [ ] `frontend/` 初始化 Vite + Vue3 + TS + Router + Pinia + maplibre-gl + vitest + eslint/prettier
-- [ ] 旧 `index.html`/`app.js`/`app.css`/`data/` 留档（`frontend-legacy/` 或分支 tag `legacy-frontend`）
-- [ ] `vite.config.ts`：`/api` proxy、`base: '/'`、`build.outDir = dist`
-- [ ] 后端 SPA fallback + `frontendDir` 配置化 + 缓存头
-- [ ] 验收：`npm run dev` 起来，`/`、`/record`、`/archive` 三个空页面都能直接刷新命中，`/api/records` 经 proxy 正常返回
+- [x] `frontend/` 初始化 Vite + Vue3 + TS + Router + Pinia + maplibre-gl + vitest + eslint/prettier
+  （`package.json`、`vite.config.ts`、`tsconfig.json`、`env.d.ts`、`eslint.config.js`、`.prettierrc.json`）
+- [x] 旧 `index.html` 被 Vite 入口替换；`app.js` / `app.css` / `data/` **原地保留**作为 P1/P3 移植参照，
+  并在 git 历史里留档（替代物理搬到 `frontend-legacy/`，见 §11 实施偏差）
+- [x] `vite.config.ts`：`/api`、`/health` proxy（`VITE_API_PROXY`，默认 `http://127.0.0.1:8080`）、`base: '/'`、`build.outDir = dist`
+- [x] 三条路由 + 占位视图 + `AppShell`/`AppNav`/`ToastHost`（`stores/toast.ts`）+ 设计令牌 `styles/tokens.css`、`styles/base.css`
+- [x] 后端：`route.go` SPA fallback（`/api` JSON 404 / 真实文件 / 带扩展名缺失 404 / 其余回 `index.html`）+ 缓存头
+- [x] 后端：`config.FrontendConfig{devdir,distdir}` + `Config.StaticDir()`，`main.go` 不再写死 `../frontend`
+- [x] 验收项（见 `frontend/README.md` 的「构建与联调 SPA 兜底」）：`/`、`/archive`、`/record` 直接刷新可命中；
+  `/api/nope` 返回 JSON 404；缺失的 `/assets/*.js` 返回 404 而非 HTML
+
+> 下一步：P1 —— 把 `app.js` 中与 DOM 无关的逻辑搬进 `src/domain/*`，用 Vitest 固化数字口径。
 
 ### P1 · 纯逻辑搬家（1.5d，风险最高收益最大）
 
@@ -167,8 +205,8 @@ frontend/                       # Vite 项目根（原 index.html/app.js/app.css
 
 ### P2 · 骨架与状态（1d）
 
-- [ ] `AppShell` + `AppNav` + `FilterBar` + `ToastHost` + `HelpDialog`
-- [ ] `useRecordsStore`：`ensureLoaded()` / `refresh()` / `filteredRecords` / `selectedId`；`usePrefsStore`：皮肤、指标可见性、自定义标题（localStorage key 沿用）；`useToastStore`
+- [ ] `FilterBar` + `HelpDialog`（`AppShell` / `AppNav` / `ToastHost` 已在 P0 落地）
+- [ ] `useRecordsStore`：`ensureLoaded()` / `refresh()` / `filteredRecords` / `selectedId`；`usePrefsStore`：皮肤、指标可见性、自定义标题（localStorage key 沿用）
 - [ ] 筛选状态 ↔ URL query 双向同步（`/` 与 `/archive` 共享）
 - [ ] 验收：三路由切换、深链刷新、浏览器前进后退、筛选跨页一致
 
@@ -293,3 +331,47 @@ api/client.ts ──records──▶ useRecordsStore
 4. 用户体系（登录、按用户隔离数据）与 `users` 表联动。
 5. 多语言（当前中文优先，地名仍按"可读性"选显示语言）。
 6. `go:embed dist` 单二进制分发。
+
+## 11. 实施记录与偏差
+
+### P0 落地清单
+
+| 文件 | 说明 |
+| --- | --- |
+| `frontend/package.json` | Vue 3.5 / Router 4 / Pinia 2 / maplibre-gl 4 / Vite 5 / vitest 2 / ESLint 9 + Prettier |
+| `frontend/vite.config.ts` | `/api`·`/health` proxy、`@` 别名、`outDir: dist`、vitest 配置 |
+| `frontend/tsconfig.json` | `strict`、`verbatimModuleSyntax`、`moduleResolution: bundler`、`@/*` 路径映射 |
+| `frontend/index.html` | 仅 `#app` + `/src/main.ts`（旧页面入口已被替换） |
+| `frontend/src/main.ts`、`App.vue` | Pinia + Router 挂载 |
+| `frontend/src/router/index.ts` | `/`、`/record`（懒加载）、`/archive`（懒加载）、未知路径回 `/`；`afterEach` 写 `document.title` |
+| `frontend/src/layout/` | `AppShell`（页头 + `AppNav` + `KeepAlive include="HomeView"`）、`ToastHost` |
+| `frontend/src/stores/toast.ts` | 全局轻提示（替代旧 `flashToast`） |
+| `frontend/src/styles/` | `tokens.css` 沿用旧令牌；`base.css` 纸纹背景、三页共享版式类 |
+| `frontend/src/views/` | 三页占位视图 + `components/common/PhaseNotice.vue` 展示阶段进度 |
+| `frontend/public/data/README.md` | 约定大 GeoJSON / rail paths 走运行时 fetch，不打进 bundle |
+| `backend/config/config.go` | `FrontendConfig` + `Config.StaticDir()` |
+| `backend/config/configs/app.yaml` | 新增 `frontend.devdir` / `frontend.distdir` |
+| `backend/main.go` | 改用 `cfg.StaticDir()` |
+| `backend/server/route.go` | SPA fallback + 目录穿越防护 + 缓存策略 |
+
+### 偏差
+
+1. **旧的 `app.js` / `app.css` / `data/` 没有物理移动到 `frontend-legacy/`**：本次执行环境没有可用 shell，
+   大文件（GeoJSON）无法搬运。改为「原地保留 + git 历史留档 + `frontend/README.md` 写清取回命令」，
+   效果等价（旧版可随时用 `git worktree` 检出），并在 P1/P3 完成后随迁移一起删除。
+   若坚持要独立目录，执行：
+   ```bash
+   mkdir -p frontend-legacy
+   git mv frontend/app.js frontend/app.css frontend/data frontend-legacy/
+   git show HEAD:frontend/index.html > frontend-legacy/index.html   # 注意替换前提交
+   ```
+2. `frontend/README.md` 被替换为新前端开发说明；旧版 README（journey-atlas 定制指南）仍在 git 历史里，
+   P1 移植 `CITY` / `POSTER_THEMES` 时可 `git show HEAD~1:frontend/README.md` 查阅。
+3. 三页视图是占位实现（阶段进度卡片），真实内容按 P3/P4/P5 逐步替换；`KeepAlive` 已就位，等 `MapCanvas` 接入。
+4. **白屏防护 + dev 反代（P0 后补）**：
+   - dev 模式新增 `frontend.devproxy`（默认 `http://127.0.0.1:5173`），非 `/api` 请求整体反代给 Vite，
+     **8080 与 5173 是同一个应用**（含 HMR websocket）；Vite 未起时返回说明页（502），起好后刷新即可、无需重启后端。
+   - 反代不可用时 `ErrorHandler` 不走默认的空白 502 页，而是 `diagnosticPage()`。
+   - 无 devproxy、且 `dist/` 未构建时托管 Vite 源码目录会白屏（`/src/main.ts` 浏览器跑不了）：
+     启动 `isViteSourceRoot()` 命中即 `ERROR` 日志，SPA 兜底返回诊断页而不是源码 `index.html`。
+   - 已知限制：`StaticDir()` 在启动时选定，`npm run build` 后需重启后端（devproxy 路径不受此限制）。

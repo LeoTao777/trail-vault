@@ -1,101 +1,126 @@
-# Roamap · 旅行地图
+# TrailVault 前端（Vue 3 + TypeScript + Vite）
 
-> Turn your trips into an editorial-grade interactive atlas — runs entirely in the browser, no backend, your data stays with you.
->
-> 把你走过的路变成一张可交互的、编辑感十足的旅行地图 —— 纯前端、无后端、数据完全留在你自己手里。
+三页结构：
 
-### ▶ [Live demo / 在线演示 →](https://novakepler513.github.io/journey-atlas/)
+| 路由 | 视图 | 内容 |
+| --- | --- | --- |
+| `/` | `views/HomeView.vue` | 主页：地图 + 时间线（默认页） |
+| `/record` | `views/RecordView.vue` | 录入：表单 + 地点联想 + 数据工具 |
+| `/archive` | `views/ArchiveView.vue` | 旅行档案：统计榜 + 资料明细 |
 
-The demo ships with **two fictional travelers** so you can see the per-traveler filter at work: **Nova Kepler** (Shanghai-based — lots of flights plus a dense domestic high-speed-rail web) and **林叙 / Lin Xu** (flies to Japan & Europe, then rides trains everywhere abroad). Switch the **旅客 (traveler)** filter and the whole map changes shape. All trips are made up — replace `data/travel-log.json` with your own.
+重构计划与阶段验收标准见 **[`../docs/FRONTEND_VUE3_PLAN.md`](../docs/FRONTEND_VUE3_PLAN.md)**。
+当前进度：**P0（脚手架）已完成**，三个页面为占位视图。
 
-演示内置**两位虚构旅客**，方便你看「按旅客筛选」的效果：**Nova Kepler**（常居上海，大量航班 + 密集的国内高铁/城际）与 **林叙**（飞到日本、欧洲后，在当地大量坐火车）。切换上方的**旅客**筛选，整张地图的形状都会变。所有行程均为虚构，把 `data/travel-log.json` 换成你自己的即可。
+## 环境要求
 
----
+- Node **>= 20.19**（Vite 5 / vitest 2）
+- Go 后端可选：只有需要真实 `/api/*` 数据时才要起（否则页面可用 mock 数据开发）
 
-## Features · 功能
-
-- **Two-system map** — a China view (province-level GeoJSON) and a World view, one-tap toggle. Routes drawn as great-circle arcs (flights) or real rail tracks (trains).
-- **Animated playback (`播放旅程`)** — replays your journeys in time order, the camera following each leg like a film; comet trail colored by transport type, leaving an ink-trail behind.
-- **Year growth (`岁月`)** — watch the map light up year by year.
-- **Travel archive (`旅行档案`)** — auto-computed stats: total distance, nights away, cities lit, countries/continents, most-stayed cities, busiest routes, by-year and by-transport breakdowns. Hover any rank to spotlight related boards.
-- **Searchable ledger (`资料明细`)** — every record in a table; search by train no. / flight / city / project and jump-and-highlight the row.
-- **Posters** — export an A4 "journey poster" or a stylized street-grid poster of any focused city.
-- **Show mode (`展示`)** — hide work-in-progress fields for a clean screenshot or sharing.
-- **Custom title, in-app** — rename the masthead from the `···` menu; persists in your browser.
-- **23 color skins**, full keyboard/mobile support, and a confidence model (confirmed / partial / inferred / gap-to-fill) so you can ship an honest map even while data is incomplete.
-
-## Quick start · 快速开始
-
-It's a static site — no build step.
+## 开发
 
 ```bash
-# clone, then serve the folder over http (file:// won't load the JSON)
-python3 -m http.server 8000
-# open http://localhost:8000
+cd frontend
+npm install
+cp .env.example .env.local   # 可选：改 VITE_API_PROXY，默认 http://127.0.0.1:8080
+npm run dev                  # http://localhost:5173
 ```
 
-Or drop the folder on any static host (GitHub Pages, Netlify, Vercel, Cloudflare Pages…).
+另开一个终端起后端（提供 `/api/records`、`/api/users`）：
 
-> Opening `index.html` directly via `file://` won't work because browsers block `fetch()` of local JSON. Use any local server (the one-liner above is enough). The bundled `data/*-data.js` mirrors are loaded via `<script>` so most things still render from `file://`, but a server is the reliable path.
+```bash
+cd backend
+go run .
+```
 
-## Make it yours · 改成你自己的
+`vite.config.ts` 已把 `/api` 与 `/health` 反代到 `VITE_API_PROXY`，前端代码里直接
+`fetch('/api/records')` 即可，无需写死 host。
 
-0. **Start from a blank map** → `···` menu → **清空全部数据 (Clear all data)** wipes the demo from your browser so you can enter your own. (To make the *deployed* site start empty for everyone, set `records: []` in `data/travel-log.json`.) Get the demo back anytime with **重载资料 (Reload)**.
-1. **Your trips** → edit `data/travel-log.json` (schema: [`docs/DATA_SCHEMA.md`](docs/DATA_SCHEMA.md)). Keep `data/travel-log-data.js` in sync (it's the same JSON wrapped as `window.TRAVEL_LOG_DATA = …;`).
-2. **Your name / title** → top of `app.js`:
-   ```js
-   const APP_NAME   = "Roamap";       // project name shown on the loading screen
-   const SITE_TITLE = { eyebrow: "ROAMAP", title: "Nova\n行旅地图", docTitle: "Nova · 行旅地图" };
-   const OWNER_NAME = "Nova Kepler";   // your name / default traveler
-   const HOME_CITY  = "上海";           // your home city (for the "nights at home" estimate)
-   ```
-   (You can also rename the masthead live from the `···` → “自定义标题” menu — it saves to your browser.)
-3. **Any place, just type it** → the entry form geocodes unknown places live via OpenStreetMap (Photon) and remembers their coordinates — Chinese towns, overseas cities, anything real. (You can still hardcode coordinates in the `CITY` map in `app.js` if you prefer.)
-4. **Real rail tracks** → China's rail geometry is **bundled** (precomputed from public OpenStreetMap data via BRouter). Rail legs you add are routed **live against BRouter** for a real track and cached in your browser; genuinely un-routable legs (cross-ocean, or networks BRouter can't trace) fall back to a smooth great-circle arc. To bake more tracks into the repo itself, run `python3 data/build-real-paths.py`.
+反方向也通了：`backend/config/configs/app.yaml` 里的 `frontend.devproxy: http://127.0.0.1:5173`
+让后端在 dev 模式下把非 `/api` 请求**反代给 Vite dev server**，所以：
 
-Full guide: [`docs/CUSTOMIZE.md`](docs/CUSTOMIZE.md).
+- 开发时打开 **5173** 或 **8080** 看到的是同一个应用（都是热更新）；
+- 只在 8080 看「构建产物」时，把 `devproxy` 置空即可（见下方联调流程）。
 
-## Notes · 说明
+## 构建与联调 SPA 兜底
 
-- **Ticket OCR is currently disabled.** Reading trips automatically from ticket photos/screenshots needs a recognition backend (OCR/AI), which a pure static site can't bundle. The entry form is manual for now; we may add OCR later if there's demand — open an issue. · **票据 OCR 暂时关闭**：从车票截图自动识别行程需要一个识别后端，纯静态站点无法内置，目前请手动录入；后续若有需要可能补上，欢迎提 issue。
-- **Rail tracks:** China is covered by a built-in template + live routing; some overseas networks and any cross-ocean "rail" leg can't be traced and show a smooth arc instead. · **铁路轨迹**：中国已内置模板并支持在线补轨；部分境外线网与跨洋"铁路"段无法描出真实轨道，会以平滑弧线表示。
+```bash
+cd frontend
+npm run build        # 产出 frontend/dist/
+cd ../backend
+go run .             # dev 模式下检测到 dist/index.html 会优先托管产物
+```
 
-- **Place names & language:** search results are ranked admin-first (city / county / town before landmarks) and shown in a script you can read — Chinese for Chinese places, the local name when it's Latin/Chinese/Japanese, otherwise English (so Arabic / Cyrillic / Thai names don't show as unreadable glyphs). This build is **Chinese-user-first**; a fuller multilingual experience (per-user language, keeping every place's native name) is future work. · **地名与语言**：候选按行政级别排序（市/县/镇在前，景点靠后），并以你能读的文字显示（中国地点中文；当地名是拉丁/中日文就保留，否则回退英文）。**当前以中文用户为主**；更完整的多语言（按用户语言、保留各地母语名）是未来方向。
+验证 SPA fallback（这是 P0 的核心验收项）：
 
-Full list of current limitations and what could fix them: **[docs/ROADMAP.md](docs/ROADMAP.md)**. Release notes: **[CHANGELOG.md](CHANGELOG.md)**.
-完整的已知限制与未来解法见 **[docs/ROADMAP.md](docs/ROADMAP.md)**；更新记录见 **[CHANGELOG.md](CHANGELOG.md)**。
+- `http://127.0.0.1:8080/` 正常打开
+- `http://127.0.0.1:8080/archive`、`/record` **直接刷新**也能打开（不是 404）
+- `http://127.0.0.1:8080/api/nope` 返回 **JSON** `{"error":"not found"}`，而不是 index.html
+- `http://127.0.0.1:8080/assets/xxx.js`（不存在的资源）返回 404，而不是 HTML
 
-## Privacy · 隐私
+### 常见问题：8080 打开是空白/说明页
 
-Everything runs client-side. There is no server, no analytics, no account. Your `travel-log.json` lives in your repo / your browser only. When self-hosting publicly, remember the data file is public — keep out anything you don't want shared.
+两种情况：
 
-全程在你的浏览器里运行：没有服务器、没有埋点、没有账号。注意：公开部署时 `travel-log.json` 是公开可见的，别把不想分享的信息放进去。
+**① dev 模式配了 `frontend.devproxy`，但 Vite 没起**
+→ 页面是「反代目标 Vite dev server 没有响应」。起好 `npm run dev` 后刷新即可，**不用重启后端**。
 
-## Tech · 技术栈
+**② 没配 devproxy，且 `dist/` 也没构建**
+→ Gin 托管的是 Vite 源码目录，源码 `index.html` 引 `/src/main.ts`（TypeScript，浏览器跑不了）。
+日志特征：
 
-Vanilla JS + Canvas + [MapLibre GL JS](https://maplibre.org/). No framework, no build step, no backend.
+```
+GET "/"            200/304
+GET "/src/main.ts" 200     ← 就是它在白屏
+```
 
-## Dev tools · 开发脚本 (`data/`)
+两种修法：
 
-- `audit.py` — pre-commit self-check on your records (date order, schema, suspicious states).
-- `build-real-paths.py` — precompute real rail tracks for your train legs (via BRouter).
-- `merge-records.py` — dedupe & merge new records into the log.
+```bash
+cd frontend && npm run dev      # 开发：开 devproxy 后 8080 也直接可用
+# 或
+cd frontend && npm run build && cd ../backend && go run .   # 静态：重启后 8080 托管 dist
+```
 
-## Credits & acknowledgements · 致谢
+注意：`StaticDir()` 在**启动时**决定托管目录，`npm run build` 之后必须重启后端；
+而 `devproxy` 的连接失败是请求时判断的，Vite 起了刷新即可。
 
-This project stands on a lot of generous open-source work and open data. Heartfelt thanks to all of them — please go visit and use them too.
-本项目站在许多慷慨的开源项目与开放数据之上，在此一并致谢，也欢迎大家去使用它们：
+## 脚本
 
-- **[maptoposter](https://maptoposter.0v0.one/)** — the **「街道海报 ↗」** button hands off to this lovely project; its street-grid posters are genuinely beautiful, so rather than reinvent it I link straight to it. Go make a poster there! · 「街道海报」按钮直接跳转到它——它生成的街道路网海报太好看了，与其重造不如把你交接过去，强烈推荐。
-- **[MapLibre GL JS](https://maplibre.org/)** (BSD-3) — the interactive vector map engine. · 交互矢量地图引擎。
-- **[OpenFreeMap](https://openfreemap.org/)** + **[OpenMapTiles](https://openmaptiles.org/)** — free vector base-map tiles & styles. · 免费矢量底图瓦片与样式。
-- **[OpenStreetMap](https://www.openstreetmap.org/copyright)** (© OSM contributors, ODbL) — the open geodata under the base map, the geocoder, and the rail routing. · 底图、地理编码与铁路路由背后的开放地理数据。
-- **[BRouter](https://brouter.de/)** — open routing engine; we use its public server (with a rail-only profile) to trace real railway geometry, both offline and live in-browser. · 开源路由引擎；用其公共服务器（rail-only profile）描出真实铁轨，离线预算与浏览器在线补轨都靠它。
-- **[Photon](https://photon.komoot.io/) by Komoot** — open geocoder (on OSM data) that powers the "type any place" search. · 基于 OSM 的开源地理编码，支撑「任意地点检索」。
-- **[DataV.GeoAtlas](https://datav.aliyun.com/portal/school/atlas/area_selector)** (Aliyun) — public China province GeoJSON (`data/china-100000-full.json`). · 中国省级行政区 GeoJSON。
-- **[world-atlas](https://github.com/topojson/world-atlas)** / **[Natural Earth](https://www.naturalearthdata.com/)** (public domain) — world country topology (`data/world-110m.json`). · 世界国家边界拓扑。
-- **[jsDelivr](https://www.jsdelivr.com/)** — CDN serving the MapLibre library. · 提供 MapLibre 的 CDN。
+| 命令 | 作用 |
+| --- | --- |
+| `npm run dev` | Vite dev server（5173，含 /api 反代） |
+| `npm run build` | `vue-tsc --noEmit` 类型检查 + 构建到 `dist/` |
+| `npm run typecheck` | 只做类型检查 |
+| `npm run lint` / `npm run format` | ESLint / Prettier |
+| `npm run test` | Vitest（P1 起放 `src/domain/*.spec.ts`） |
 
-## License
+## 目录约定
 
-[MIT](LICENSE) © Nova Kepler. Demo data and the two demo travelers are fictional. Bundled map tiles, geo datasets, and the linked projects above retain their own respective licenses.
+```
+src/
+├─ domain/     纯逻辑（无 Vue 依赖，可单测）：城市坐标、Photon 地理编码、归一化、筛选、统计、CSV、票据解析、主题
+├─ api/        fetch 封装 + 三级回退（后端 → localStorage 缓存 → 内置数据）
+├─ stores/     Pinia：records / prefs / toast
+├─ layout/     AppShell / AppNav / FilterBar / ToastHost
+├─ views/      HomeView / RecordView / ArchiveView
+└─ components/ map / timeline / archive / record / poster / common
+public/data/   大 GeoJSON 与铁路轨迹，运行时按需 fetch（不打包）
+```
+
+## 旧版前端（迁移期留档）
+
+旧版是纯静态 Vanilla JS（单页 + `data-pane` 切区块，`app.js` 4111 行）。P0 用 Vite 入口替换了
+`index.html`，旧文件 **仍在磁盘上、且都在 git 历史里**，作为 P1/P3 的移植参照：
+
+- `app.js`、`app.css`、`data/*`（旧资源，新代码不再引用）
+- 旧 `index.html` 内容可用 `git show HEAD:frontend/index.html` 查看
+
+需要把旧版跑起来做对照时（P7 parity QA 前）：
+
+```bash
+git log --oneline -- frontend/index.html      # 找到替换前的提交
+git worktree add ../trail-vault-legacy <commit>
+# ../trail-vault-legacy/frontend 即为可运行的旧版静态站
+```
+
+P1（domain 搬迁）与 P3（地图/海报移植）完成后删除 `app.js`、`app.css`、`data/`。

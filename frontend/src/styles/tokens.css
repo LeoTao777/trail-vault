@@ -1,0 +1,30 @@
+:root {
+  /* 纸感配色令牌 —— 沿用旧版 app.css，保证迁移期视觉语言不断层 */
+  --paper: #fbfaf4;
+  --paper-warm: #f3efe5;
+  --ink: #141414;
+  --ink-soft: #3f3c36;
+  --muted: #777064;
+  --faint: #b9b0a1;
+  --line: #d8d0c1;
+  --line-strong: #1c1b18;
+  --red: #b84232;
+  --gold: #9b7832;
+  --green: #52786d;
+  --blue: #46627a;
+  --rail: #52786d;
+  --flight: #b84232;
+  --stay: #7f8f5a;
+  --road: #9b7832;
+  --other: #6e6578;
+
+  --radius: 6px;
+  --serif: 'Songti SC', 'STSong', 'Noto Serif CJK SC', 'Source Han Serif SC', Georgia, serif;
+  --sans:
+    -apple-system, BlinkMacSystemFont, 'Segoe UI', 'PingFang SC', 'Hiragino Sans GB', 'Microsoft YaHei',
+    sans-serif;
+  --mono: 'SFMono-Regular', 'JetBrains Mono', Menlo, Consolas, monospace;
+
+  font-family: var(--serif);
+  color-scheme: light;
+}

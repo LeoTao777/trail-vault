@@ -12,10 +12,10 @@ import (
 	"gorm.io/gorm"
 )
 
-// Server 封装 Gin 引擎与监听地址。
+// Server 封装 Gin 引擎、业务依赖与前端托管配置。
 type Server struct {
-	cfg                 *config.ServerConfig
-	frontendDir         string // 调试：前端静态文件目录；部署时改为打包产物目录
+	cfg                 *config.Config
+	frontendDir         string // 前端托管目录：dev 可能是 Vite 源码目录，release 是 dist
 	userService         service.UserService
 	userHandler         *handler.UserHandler
 	travelRecordService service.TravelRecordService
@@ -23,7 +23,7 @@ type Server struct {
 	log                 *zap.Logger
 }
 
-func New(srvCfg *config.ServerConfig, frontendDir string, db *gorm.DB, log *zap.Logger) *Server {
+func New(cfg *config.Config, db *gorm.DB, log *zap.Logger) *Server {
 	userRepo := repository.NewUserRepository(db)
 	userService := service.NewUserService(userRepo)
 	userHandler := handler.NewUserHandler(userService)
@@ -33,8 +33,8 @@ func New(srvCfg *config.ServerConfig, frontendDir string, db *gorm.DB, log *zap.
 	travelRecordHandler := handler.NewTravelRecordHandler(travelRecordService)
 
 	return &Server{
-		cfg:                 srvCfg,
-		frontendDir:         frontendDir,
+		cfg:                 cfg,
+		frontendDir:         cfg.StaticDir(),
 		userService:         userService,
 		userHandler:         userHandler,
 		travelRecordService: travelRecordService,
@@ -45,22 +45,24 @@ func New(srvCfg *config.ServerConfig, frontendDir string, db *gorm.DB, log *zap.
 
 // Run 根据 host:port 启动 HTTP 服务。
 func (s *Server) Run() error {
-	gin.SetMode(toGinMode(s.cfg.Mode))
+	gin.SetMode(toGinMode(s.cfg.Server.Mode))
 
 	r := gin.Default()
 	s.registerRoutes(r) // 路由注册见 route.go
 
-	addr := fmt.Sprintf("%s:%d", s.cfg.Host, s.cfg.Port)
+	addr := fmt.Sprintf("%s:%d", s.cfg.Server.Host, s.cfg.Server.Port)
 	s.log.Info("listening on",
 		zap.String("addr", addr),
 		zap.String("frontend", s.frontendDir),
+		zap.String("mode", string(s.cfg.Server.Mode)),
+		zap.String("devproxy", s.cfg.DevProxy()),
 	)
 	return r.Run(addr)
 }
 
 // toGinMode 将配置中的 dev/release 映射为 Gin 的 debug/release 模式。
-func toGinMode(m config.Devmode) string {
-	switch m {
+func toGinMode(mode config.Devmode) string {
+	switch mode {
 	case config.Release:
 		return gin.ReleaseMode
 	default:
